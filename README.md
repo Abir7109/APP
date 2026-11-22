@@ -59,6 +59,14 @@ test/          model, demo backend, and widget smoke tests
 docs/          Firebase setup, schema, rules, feature guide
 ```
 
+## Design system & art
+
+- **Redesign guide:** [`docs/UI_REDESIGN.md`](UI_REDESIGN.md) — audit, new visual system, component upgrades, screen-by-screen map, and a 12-rule simplicity checklist.
+- **Asset pack:** [`docs/asset_sheet.png`](asset_sheet.png) previews every illustration. Art lives in `assets/brand/` (icon, mark, notification silhouette) and `assets/illustrations/` (mascots, splash scene, feature spot art, empty state).
+- **In code:** `lib/core/widgets/app_illustration.dart` exposes `AppArt`, `AppIllustration`, and `IllustrationTile` so screens never hardcode asset paths.
+
+The art direction is *soft-clay kawaii*: a pink heart and a lilac bun as the mascot pair, chunky rounded volumes, and the existing pink/coral/peach palette.
+
 ## Design & IP
 
 YOU&ME is an original app. It is inspired by the *design language* recovered from a reference app, but contains no reference-app code, assets, copy, or backend. Brand artwork lives in `assets/brand/` and can be replaced with your own.
