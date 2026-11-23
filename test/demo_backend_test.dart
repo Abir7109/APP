@@ -170,4 +170,89 @@ void main() {
     expect(today.length, 1);
     expect(today.first.mood, 5);
   });
+
+  test('live request can be allowed, moved, and ended', () async {
+    final backend = await _backend();
+    await backend.createSpace(
+      myName: 'Alex',
+      partnerName: 'Sam',
+      anniversary: DateTime(2024, 2, 14),
+    );
+    final me = (await backend.currentUser())!;
+    final partner = (await backend.watchPartner().first)!;
+    final now = DateTime.now();
+
+    await backend.sendLiveRequest(
+      requesterName: 'Alex',
+      point: LivePoint(
+        latitude: 48.8584,
+        longitude: 2.2945,
+        updatedAt: now,
+        accuracy: 10,
+      ),
+    );
+
+    var session = (await backend.watchLiveSession().first)!;
+    expect(session.isPending, isTrue);
+    expect(session.requesterId, me.id);
+    expect(session.pointFor(me.id), isNotNull);
+
+    await backend.respondToLiveRequest(
+      allow: true,
+      point: LivePoint(
+        latitude: 48.8600,
+        longitude: 2.3000,
+        updatedAt: now,
+      ),
+    );
+
+    session = (await backend.watchLiveSession().first)!;
+    expect(session.isAllowed, isTrue);
+    expect(session.points.length, 2);
+    expect(session.pointFor(partner.id), isNotNull);
+    expect(session.expiresAt!.isAfter(DateTime.now()), isTrue);
+
+    final moved = LivePoint(
+      latitude: 48.8610,
+      longitude: 2.3010,
+      updatedAt: DateTime.now(),
+    );
+    await backend.updateLiveLocation(moved);
+    session = (await backend.watchLiveSession().first)!;
+    expect(session.pointFor(me.id)!.latitude, moved.latitude);
+
+    await backend.endLiveSession();
+    session = (await backend.watchLiveSession().first)!;
+    expect(session.isEnded, isTrue);
+    expect(session.points, isEmpty);
+  });
+
+  test('demo can simulate and deny an incoming live request', () async {
+    final backend = await _backend();
+    await backend.createSpace(
+      myName: 'Alex',
+      partnerName: 'Sam',
+      anniversary: DateTime(2024, 2, 14),
+    );
+    final partner = (await backend.watchPartner().first)!;
+
+    await backend.simulateIncomingLiveRequest(
+      requesterName: 'Sam',
+      point: LivePoint(
+        latitude: 48.8584,
+        longitude: 2.2945,
+        updatedAt: DateTime.now(),
+      ),
+    );
+
+    var session = (await backend.watchLiveSession().first)!;
+    expect(session.isPending, isTrue);
+    expect(session.requesterId, partner.id);
+    expect(session.requesterName, 'Sam');
+    expect(session.pointFor(partner.id), isNotNull);
+
+    await backend.respondToLiveRequest(allow: false);
+    session = (await backend.watchLiveSession().first)!;
+    expect(session.isDenied, isTrue);
+  });
 }

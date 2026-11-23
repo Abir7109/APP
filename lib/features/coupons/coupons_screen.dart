@@ -6,12 +6,13 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/dates.dart';
 import '../../core/utils/ids.dart';
 import '../../core/utils/ui.dart';
-import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/app_sheet.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
-import '../../core/widgets/soft_icon.dart';
+import '../../core/widgets/hero_card.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../data/models/models.dart';
 import '../../data/seed/seed_content.dart';
 import '../../state/data_providers.dart';
@@ -23,8 +24,7 @@ class CouponsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final coupons =
-        ref.watch(couponsProvider).value ?? const <Coupon>[];
+    final coupons = ref.watch(couponsProvider).value ?? const <Coupon>[];
     final active = coupons.where((coupon) => !coupon.redeemed).toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final redeemed = coupons.where((coupon) => coupon.redeemed).toList()
@@ -52,83 +52,55 @@ class CouponsScreen extends ConsumerWidget {
           AppSpacing.xxxl,
         ),
         children: [
-          AppCard(
-            gradient: AppGradients.brand,
-            borderColor: Colors.transparent,
-            padding: const EdgeInsets.all(AppSpacing.xxl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.confirmation_number_rounded,
-                  color: Colors.white,
-                  size: 30,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Little acts of love,\nready to redeem.',
-                  style: context.texts.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
+          StaggeredEnter(
+            index: 0,
+            child: HeroCard(
+              backgroundColor: colors.softPink,
+              art: AppArt.coupons,
+              artSize: 96,
+              eyebrow: 'Coupons',
+              title: 'Little acts of love, ready to redeem.',
+              subtitle:
                   '${active.length} coupon${active.length == 1 ? '' : 's'} waiting.',
-                  style: context.texts.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                  ),
-                ),
-              ],
             ),
           ),
           if (active.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'READY TO REDEEM',
-              style: context.texts.labelSmall?.copyWith(
-                color: colors.muted,
-                letterSpacing: 1,
-              ),
-            ),
+            Text('Ready to redeem', style: context.texts.titleMedium),
             const SizedBox(height: AppSpacing.sm),
-            for (final coupon in active) ...[
-              _CouponCard(
-                coupon: coupon,
-                author: coupon.createdBy == session.myId
-                    ? 'From you'
-                    : 'From ${session.partnerName}',
-                onRedeem: () => _redeem(context, ref, coupon),
+            for (var index = 0; index < active.length; index++) ...[
+              StaggeredEnter(
+                index: index + 1,
+                child: _CouponTicket(
+                  coupon: active[index],
+                  author: active[index].createdBy == session.myId
+                      ? 'From you'
+                      : 'From ${session.partnerName}',
+                  onRedeem: () => _redeem(context, ref, active[index]),
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ],
           if (redeemed.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'REDEEMED',
-              style: context.texts.labelSmall?.copyWith(
-                color: colors.muted,
-                letterSpacing: 1,
-              ),
-            ),
+            Text('Redeemed', style: context.texts.titleMedium),
             const SizedBox(height: AppSpacing.sm),
             for (final coupon in redeemed) ...[
-              _CouponCard(
+              _CouponTicket(
                 coupon: coupon,
                 author: coupon.createdBy == session.myId
                     ? 'From you'
                     : 'From ${session.partnerName}',
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ],
           if (coupons.isEmpty)
             EmptyState(
-              icon: Icons.confirmation_number_rounded,
+              art: AppArt.coupons,
               title: 'No coupons yet',
-              message:
-                  'Offer something small and specific: breakfast, a massage, one phone-free hour.',
+              message: 'Offer one small thing they can cash in.',
               actionLabel: 'Create a coupon',
               onAction: () => _showEditor(context),
             ),
@@ -170,8 +142,12 @@ class CouponsScreen extends ConsumerWidget {
   }
 }
 
-class _CouponCard extends StatelessWidget {
-  const _CouponCard({required this.coupon, required this.author, this.onRedeem});
+class _CouponTicket extends StatelessWidget {
+  const _CouponTicket({
+    required this.coupon,
+    required this.author,
+    this.onRedeem,
+  });
 
   final Coupon coupon;
   final String author;
@@ -180,56 +156,149 @@ class _CouponCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final redeemed = coupon.redeemed;
-    return AppCard(
-      borderColor: redeemed ? colors.border : colors.primary.withValues(alpha: 0.35),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final shape = BorderRadius.circular(AppRadii.lg);
+    return Container(
+      decoration: BoxDecoration(
+        color: dark ? colors.cardAlt : colors.card,
+        borderRadius: shape,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SoftIcon(
-            icon: redeemed
-                ? Icons.check_rounded
-                : Icons.confirmation_number_rounded,
-            color: redeemed ? colors.success : colors.primary,
-            size: 48,
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Row(
               children: [
-                Text(
-                  coupon.title,
-                  style: context.texts.titleSmall?.copyWith(
-                    decoration: redeemed ? TextDecoration.lineThrough : null,
-                    color: redeemed ? colors.muted : colors.text,
+                IllustrationTile(
+                  AppArt.coupons,
+                  size: 44,
+                  background: redeemed ? colors.background : colors.softPink,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        coupon.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.texts.titleSmall?.copyWith(
+                          decoration:
+                              redeemed ? TextDecoration.lineThrough : null,
+                          color: redeemed ? colors.muted : colors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        author,
+                        style: context.texts.bodySmall?.copyWith(
+                          color: colors.muted,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  author,
-                  style: context.texts.bodySmall?.copyWith(color: colors.muted),
-                ),
-                if (redeemed && coupon.redeemedAt != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  AppPill(
-                    label: 'Redeemed ${relativeDate(coupon.redeemedAt!)}',
-                    color: colors.success,
-                    icon: Icons.check_rounded,
-                  ),
-                ],
+                if (redeemed)
+                  Icon(Icons.check_circle_rounded,
+                      color: colors.success, size: 22),
               ],
             ),
           ),
-          if (!redeemed)
-            TextButton(
-              onPressed: onRedeem,
-              child: const Text('Redeem'),
+          SizedBox(
+            height: 18,
+            child: CustomPaint(
+              painter: _TicketCutPainter(
+                background: colors.background,
+                line: colors.border,
+              ),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    redeemed && coupon.redeemedAt != null
+                        ? 'Redeemed ${relativeDate(coupon.redeemedAt!)}'
+                        : 'A small promise, just for them.',
+                    style: context.texts.bodySmall?.copyWith(
+                      color: colors.muted,
+                    ),
+                  ),
+                ),
+                if (!redeemed)
+                  FilledButton(
+                    onPressed: onRedeem,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 44),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
+                      ),
+                      textStyle: context.texts.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: const Text('Redeem'),
+                  )
+                else
+                  AppPill(
+                    label: 'Used',
+                    color: colors.success,
+                    icon: Icons.check_rounded,
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+class _TicketCutPainter extends CustomPainter {
+  const _TicketCutPainter({required this.background, required this.line});
+
+  final Color background;
+  final Color line;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerY = size.height / 2;
+    const notchRadius = 9.0;
+    final notchPaint = Paint()..color = background;
+    canvas.drawCircle(Offset(0, centerY), notchRadius, notchPaint);
+    canvas.drawCircle(Offset(size.width, centerY), notchRadius, notchPaint);
+
+    final dashPaint = Paint()
+      ..color = line
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+    const dashWidth = 5.0;
+    const dashSpace = 4.0;
+    var x = notchRadius + 4;
+    final end = size.width - notchRadius - 4;
+    while (x < end) {
+      canvas.drawLine(
+        Offset(x, centerY),
+        Offset((x + dashWidth).clamp(x, end), centerY),
+        dashPaint,
+      );
+      x += dashWidth + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TicketCutPainter oldDelegate) =>
+      oldDelegate.background != background || oldDelegate.line != line;
 }
 
 class _CouponSheet extends ConsumerStatefulWidget {
@@ -280,6 +349,7 @@ class _CouponSheetState extends ConsumerState<_CouponSheet> {
     return AppSheet(
       title: 'Create a coupon',
       subtitle: 'A small promise your partner can cash in.',
+      art: AppArt.coupons,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

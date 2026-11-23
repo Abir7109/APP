@@ -7,11 +7,13 @@ import '../../core/utils/dates.dart';
 import '../../core/utils/ids.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/app_sheet.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
-import '../../core/widgets/soft_icon.dart';
+import '../../core/widgets/hero_card.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../data/models/models.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
@@ -52,93 +54,63 @@ class CapsulesScreen extends ConsumerWidget {
           AppSpacing.xxxl,
         ),
         children: [
-          AppCard(
-            gradient: AppGradients.sunset,
-            borderColor: Colors.transparent,
-            padding: const EdgeInsets.all(AppSpacing.xxl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.mail_rounded, color: Colors.white, size: 30),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Write it now.\nOpen it later.',
-                  style: context.texts.headlineMedium?.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  locked.isEmpty
-                      ? 'No capsules waiting yet.'
-                      : '${locked.length} capsule${locked.length == 1 ? '' : 's'} waiting for the right moment.',
-                  style: context.texts.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                  ),
-                ),
-              ],
+          StaggeredEnter(
+            index: 0,
+            child: HeroCard(
+              backgroundColor: colors.softPink,
+              art: AppArt.capsules,
+              artSize: 96,
+              eyebrow: 'Capsules',
+              title: 'Write it now. Open it later.',
+              subtitle: locked.isEmpty
+                  ? 'No capsules waiting yet.'
+                  : '${locked.length} capsule${locked.length == 1 ? '' : 's'} waiting for the right moment.',
             ),
           ),
           if (ready.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'READY TO OPEN',
-              style: context.texts.labelSmall?.copyWith(
-                color: colors.muted,
-                letterSpacing: 1,
-              ),
-            ),
+            Text('Ready to open', style: context.texts.titleMedium),
             const SizedBox(height: AppSpacing.sm),
-            for (final capsule in ready) ...[
-              _CapsuleCard(
-                capsule: capsule,
-                onOpen: () => _open(context, ref, capsule),
+            for (var index = 0; index < ready.length; index++) ...[
+              StaggeredEnter(
+                index: index + 1,
+                child: _CapsuleCard(
+                  capsule: ready[index],
+                  onOpen: () => _open(context, ref, ready[index]),
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ],
           if (locked.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'LOCKED',
-              style: context.texts.labelSmall?.copyWith(
-                color: colors.muted,
-                letterSpacing: 1,
-              ),
-            ),
+            Text('Locked', style: context.texts.titleMedium),
             const SizedBox(height: AppSpacing.sm),
             for (final capsule in locked) ...[
               _CapsuleCard(
                 capsule: capsule,
                 onOpen: () => _open(context, ref, capsule),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ],
           if (opened.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'OPENED',
-              style: context.texts.labelSmall?.copyWith(
-                color: colors.muted,
-                letterSpacing: 1,
-              ),
-            ),
+            Text('Opened', style: context.texts.titleMedium),
             const SizedBox(height: AppSpacing.sm),
             for (final capsule in opened) ...[
               _CapsuleCard(
                 capsule: capsule,
                 onOpen: () => _open(context, ref, capsule),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
             ],
           ],
           if (capsules.isEmpty)
             EmptyState(
-              icon: Icons.mail_rounded,
+              art: AppArt.capsules,
               title: 'No capsules yet',
-              message:
-                  'Write a letter to your future selves and choose when it unlocks.',
+              message: 'Write a letter now, open it on a date that matters.',
               actionLabel: 'Write a capsule',
               onAction: () => _showEditor(context),
             ),
@@ -177,23 +149,41 @@ class CapsulesScreen extends ConsumerWidget {
       }
     }
     if (!context.mounted) return;
-    await showDialog<void>(
+    await showGeneralDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(capsule.title),
-        content: SingleChildScrollView(
-          child: Text(
-            capsule.body,
-            style: context.texts.bodyLarge?.copyWith(height: 1.6),
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      transitionDuration: AppDurations.fast,
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return AlertDialog(
+          title: Text(capsule.title),
+          content: SingleChildScrollView(
+            child: Text(
+              capsule.body,
+              style: context.texts.bodyLarge?.copyWith(height: 1.6),
+            ),
           ),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+            child: child,
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -216,23 +206,12 @@ class _CapsuleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final locked = capsule.isLocked;
-    return AppCard(
+    return SectionCard(
       onTap: onOpen,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
-          SoftIcon(
-            icon: locked
-                ? Icons.lock_rounded
-                : capsule.opened
-                    ? Icons.mark_email_read_rounded
-                    : Icons.mark_email_unread_rounded,
-            color: locked
-                ? colors.warning
-                : capsule.opened
-                    ? colors.success
-                    : colors.primary,
-            size: 46,
-          ),
+          const IllustrationTile(AppArt.capsules, size: 48),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -251,6 +230,8 @@ class _CapsuleCard extends StatelessWidget {
                       : capsule.opened
                           ? 'Opened · ${relativeDate(capsule.createdAt)}'
                           : 'Ready to open',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: context.texts.bodySmall?.copyWith(
                     color: colors.muted,
                   ),
@@ -304,7 +285,9 @@ class _CapsuleSheetState extends ConsumerState<_CapsuleSheet> {
       helpText: 'When should it unlock?',
     );
     if (picked != null) {
-      setState(() => _unlockAt = DateTime(picked.year, picked.month, picked.day, 9));
+      setState(
+        () => _unlockAt = DateTime(picked.year, picked.month, picked.day, 9),
+      );
     }
   }
 
@@ -345,6 +328,7 @@ class _CapsuleSheetState extends ConsumerState<_CapsuleSheet> {
     return AppSheet(
       title: 'Write a capsule',
       subtitle: 'A letter for the two of you to open later.',
+      art: AppArt.capsules,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

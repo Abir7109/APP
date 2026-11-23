@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_illustration.dart';
 
 class AppSheet extends StatelessWidget {
   const AppSheet({
@@ -9,11 +10,13 @@ class AppSheet extends StatelessWidget {
     required this.title,
     required this.child,
     this.subtitle,
+    this.art,
     this.actions = const [],
   });
 
   final String title;
   final String? subtitle;
+  final AppArt? art;
   final Widget child;
   final List<Widget> actions;
 
@@ -37,14 +40,33 @@ class AppSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(title, style: context.texts.headlineSmall),
-              if (subtitle != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  subtitle!,
-                  style: context.texts.bodySmall?.copyWith(color: colors.muted),
-                ),
-              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (art != null) ...[
+                    IllustrationTile(art!, size: 40, padding: 6),
+                    const SizedBox(width: AppSpacing.md),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(title, style: context.texts.headlineSmall),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            subtitle!,
+                            style: context.texts.bodySmall?.copyWith(
+                              color: colors.muted,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.xl),
               child,
               if (actions.isNotEmpty) ...[

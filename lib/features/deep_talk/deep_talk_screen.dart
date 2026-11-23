@@ -9,9 +9,11 @@ import '../../core/utils/dates.dart';
 import '../../core/utils/ids.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/list_row.dart';
 import '../../data/models/models.dart';
 import '../../data/seed/seed_content.dart';
 import '../../state/data_providers.dart';
@@ -83,7 +85,8 @@ class _DeepTalkScreenState extends ConsumerState<DeepTalkScreen> {
     final colors = context.colors;
     final entries =
         ref.watch(deepTalkProvider).value ?? const <DeepTalkEntry>[];
-    final sorted = [...entries]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final sorted = [...entries]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final session = ref.watch(sessionProvider);
 
     return Scaffold(
@@ -103,56 +106,51 @@ class _DeepTalkScreenState extends ConsumerState<DeepTalkScreen> {
                 setState(() => _prompt = _nextPrompt());
               }
             },
-            child: AppCard(
-              gradient: AppGradients.sunset,
-              borderColor: Colors.transparent,
-              padding: const EdgeInsets.all(AppSpacing.xxl),
+            child: SectionCard(
+              color: colors.softPink,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.format_quote_rounded,
-                        color: Colors.white,
-                        size: 30,
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: AppDurations.fast,
+                          child: Text(
+                            _prompt,
+                            key: ValueKey(_prompt),
+                            style: context.texts.titleMedium?.copyWith(
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
                       ),
-                      const Spacer(),
-                      AppPill(
-                        label: 'Prompt',
-                        color: Colors.white.withValues(alpha: 0.2),
-                        filled: true,
-                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      const AppIllustration(AppArt.deepTalk, size: 64),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _prompt,
-                    style: context.texts.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
                   Row(
                     children: [
-                      TextButton.icon(
-                        onPressed: () =>
-                            setState(() => _prompt = _nextPrompt()),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.zero,
-                          alignment: Alignment.centerLeft,
-                        ),
-                        icon: const Icon(Icons.casino_rounded, size: 18),
-                        label: const Text('Shuffle prompt'),
+                      Icon(
+                        Icons.favorite_rounded,
+                        size: 12,
+                        color: colors.primary.withValues(alpha: 0.6),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: AppSpacing.xs),
                       Text(
                         'Swipe for another',
                         style: context.texts.bodySmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: colors.muted,
                         ),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () =>
+                            setState(() => _prompt = _nextPrompt()),
+                        icon: const Icon(Icons.casino_rounded, size: 18),
+                        label: const Text('Shuffle'),
                       ),
                     ],
                   ),
@@ -180,74 +178,48 @@ class _DeepTalkScreenState extends ConsumerState<DeepTalkScreen> {
             onPressed: _save,
           ),
           const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'OUR CONVERSATIONS',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
+          Text('Our conversations', style: context.texts.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           if (sorted.isEmpty)
             const EmptyState(
-              icon: Icons.forum_rounded,
+              art: AppArt.deepTalk,
               title: 'No deep talks yet',
-              message: 'Answer the prompt above and start a little ritual.',
+              message: 'Answer the question above. Keep what matters.',
             )
           else
-            for (final entry in sorted) ...[
-              _EntryCard(
-                entry: entry,
-                author: entry.uid == session.myId
-                    ? 'You'
-                    : session.partnerName,
+            SectionCard(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                children: [
+                  for (var index = 0; index < sorted.length; index++)
+                    ListRow(
+                      showDivider: index < sorted.length - 1,
+                      title: sorted[index].question,
+                      subtitle: sorted[index].answer,
+                      trailing: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          AppPill(
+                            label: sorted[index].uid == session.myId
+                                ? 'You'
+                                : session.partnerName,
+                            color: colors.tintDarker,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            relativeDate(sorted[index].createdAt),
+                            style: context.texts.bodySmall?.copyWith(
+                              color: colors.muted,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.md),
-            ],
-        ],
-      ),
-    );
-  }
-}
-
-class _EntryCard extends StatelessWidget {
-  const _EntryCard({required this.entry, required this.author});
-
-  final DeepTalkEntry entry;
-  final String author;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  entry.question,
-                  style: context.texts.labelMedium?.copyWith(
-                    color: colors.primary,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              AppPill(label: author, color: colors.tintDarker),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            entry.answer,
-            style: context.texts.bodyLarge?.copyWith(height: 1.5),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            relativeDate(entry.createdAt),
-            style: context.texts.bodySmall?.copyWith(color: colors.muted),
-          ),
+            ),
         ],
       ),
     );

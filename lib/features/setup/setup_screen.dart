@@ -7,7 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/dates.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
-import '../../core/widgets/brand_mark.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../state/session_provider.dart';
 
@@ -129,7 +129,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: BrandMark(size: 76)),
+                    const Center(
+                      child: AppIllustration(AppArt.mascots, size: 140),
+                    ),
                     const SizedBox(height: AppSpacing.xl),
                     Text(
                       'A private space for two',
@@ -138,9 +140,9 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Create a space and share the 6-digit PIN, or join with the PIN your partner sent you.',
+                      'Start a space together, or join with a PIN.',
                       textAlign: TextAlign.center,
-                      style: context.texts.bodyMedium?.copyWith(
+                      style: context.texts.bodySmall?.copyWith(
                         color: colors.muted,
                         height: 1.5,
                       ),
@@ -169,7 +171,7 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                       },
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    AppCard(
+                    SectionCard(
                       padding: const EdgeInsets.all(AppSpacing.xl),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -256,32 +258,40 @@ class _SetupScreenState extends ConsumerState<SetupScreen> {
                           ),
                           if (session.isDemo) ...[
                             const SizedBox(height: AppSpacing.md),
-                            TextButton.icon(
-                              onPressed: _loading ? null : _demo,
-                              icon: const Icon(Icons.auto_awesome_rounded),
-                              label: const Text('Open the demo space'),
+                            InkWell(
+                              onTap: _loading ? null : _demo,
+                              borderRadius:
+                                  BorderRadius.circular(AppRadii.md),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: AppSpacing.sm,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const IllustrationTile(
+                                      AppArt.checkIn,
+                                      size: 44,
+                                      padding: 8,
+                                    ),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Expanded(
+                                      child: Text(
+                                        'Open the demo space',
+                                        style: context.texts.titleSmall
+                                            ?.copyWith(color: colors.primary),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: colors.primary,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
                         ],
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.lock_outline_rounded,
-                          size: 15,
-                          color: colors.muted,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          'No passwords. Just your PIN.',
-                          style: context.texts.bodySmall?.copyWith(
-                            color: colors.muted,
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),

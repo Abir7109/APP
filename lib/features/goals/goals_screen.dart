@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -7,13 +8,22 @@ import '../../core/utils/dates.dart';
 import '../../core/utils/ids.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/app_sheet.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/heart_pop.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../data/models/models.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
+
+String _currencySymbol(String? currency) =>
+    NumberFormat.simpleCurrency(name: currency ?? 'USD').currencySymbol;
+
+double? _parseAmount(String text) =>
+    double.tryParse(text.replaceAll(RegExp(r'[^0-9.]'), ''));
 
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
@@ -33,6 +43,7 @@ class GoalsScreen extends ConsumerWidget {
         goals.fold<double>(0, (sum, goal) => sum + goal.savedAmount);
     final overall =
         totalTarget == 0 ? 0.0 : (totalSaved / totalTarget).clamp(0.0, 1.0);
+    final currency = goals.isEmpty ? 'USD' : goals.first.currency;
 
     return Scaffold(
       appBar: AppBar(
@@ -48,10 +59,9 @@ class GoalsScreen extends ConsumerWidget {
       ),
       body: goals.isEmpty
           ? EmptyState(
-              icon: Icons.savings_rounded,
+              art: AppArt.goals,
               title: 'Dream something up',
-              message:
-                  'A trip, a home project, an emergency fund. Save toward it together.',
+              message: 'Pick something to save for, together.',
               actionLabel: 'Create a goal',
               onAction: () => _showEditor(context),
             )
@@ -63,74 +73,49 @@ class GoalsScreen extends ConsumerWidget {
                 AppSpacing.xxxl,
               ),
               children: [
-                AppCard(
-                  gradient: AppGradients.sunrise,
-                  borderColor: Colors.transparent,
-                  padding: const EdgeInsets.all(AppSpacing.xxl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.savings_rounded,
-                            color: Colors.white,
-                            size: 28,
+                StaggeredEnter(
+                  index: 0,
+                  child: SectionCard(
+                    child: Row(
+                      children: [
+                        const IllustrationTile(AppArt.goals, size: 96),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${(overall * 100).round()}%',
+                                style: context.texts.headlineMedium,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${formatMoney(totalSaved, currency: currency)} of ${formatMoney(totalTarget, currency: currency)}',
+                                style: context.texts.bodySmall?.copyWith(
+                                  color: colors.muted,
+                                ),
+                              ),
+                            ],
                           ),
-                          const Spacer(),
-                          Text(
-                            '${(overall * 100).round()}%',
-                            style: context.texts.headlineSmall?.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'Building something together.',
-                        style: context.texts.headlineSmall?.copyWith(
-                          color: Colors.white,
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        '${formatMoney(totalSaved)} saved of ${formatMoney(totalTarget)}',
-                        style: context.texts.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: overall,
-                          minHeight: 8,
-                          backgroundColor:
-                              Colors.white.withValues(alpha: 0.22),
-                          valueColor: const AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xxl),
-                Text(
-                  'YOUR GOALS',
-                  style: context.texts.labelSmall?.copyWith(
-                    color: colors.muted,
-                    letterSpacing: 1,
-                  ),
-                ),
+                Text('Your goals', style: context.texts.titleMedium),
                 const SizedBox(height: AppSpacing.sm),
-                for (final goal in sorted) ...[
-                  _GoalCard(
-                    goal: goal,
-                    onAdd: () => _showContribution(context, goal),
-                    onEdit: () => _showEditor(context, goal: goal),
-                    onDelete: () => _delete(context, ref, goal),
+                for (var index = 0; index < sorted.length; index++) ...[
+                  StaggeredEnter(
+                    index: index + 1,
+                    child: _GoalCard(
+                      goal: sorted[index],
+                      onAdd: () => _showContribution(context, sorted[index]),
+                      onEdit: () => _showEditor(context, goal: sorted[index]),
+                      onDelete: () => _delete(context, ref, sorted[index]),
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
               ],
             ),
@@ -188,15 +173,37 @@ class _GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return AppCard(
+    return SectionCard(
       onTap: onEdit,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              const IllustrationTile(AppArt.goals, size: 44),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
-                child: Text(goal.title, style: context.texts.titleMedium),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      goal.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.texts.titleSmall,
+                    ),
+                    if (goal.deadline != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Target ${longDate(goal.deadline!)}',
+                        style: context.texts.bodySmall?.copyWith(
+                          color: colors.muted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               if (goal.isComplete)
                 AppPill(
@@ -216,20 +223,13 @@ class _GoalCard extends StatelessWidget {
                 ),
             ],
           ),
-          if (goal.deadline != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Target ${longDate(goal.deadline!)}',
-              style: context.texts.bodySmall?.copyWith(color: colors.muted),
-            ),
-          ],
           const SizedBox(height: AppSpacing.md),
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: goal.progress,
               minHeight: 8,
-              backgroundColor: colors.background,
+              backgroundColor: colors.field,
               valueColor: AlwaysStoppedAnimation(
                 goal.isComplete ? colors.success : colors.primary,
               ),
@@ -238,39 +238,31 @@ class _GoalCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              Text(
-                formatMoney(goal.savedAmount, currency: goal.currency),
-                style: context.texts.titleSmall?.copyWith(
-                  color: goal.isComplete ? colors.success : colors.primary,
-                ),
-              ),
-              Text(
-                ' of ${formatMoney(goal.targetAmount, currency: goal.currency)}',
-                style: context.texts.bodySmall?.copyWith(color: colors.muted),
-              ),
-              const Spacer(),
-              Text(
-                '${(goal.progress * 100).round()}%',
-                style: context.texts.bodySmall?.copyWith(color: colors.muted),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Add money'),
+                child: Text(
+                  '${formatMoney(goal.savedAmount, currency: goal.currency)} of ${formatMoney(goal.targetAmount, currency: goal.currency)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.texts.bodySmall?.copyWith(
+                    color: colors.muted,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              IconButton(
-                tooltip: 'Edit goal',
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 20),
-              ),
+              if (!goal.isComplete)
+                TextButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Add money'),
+                )
+              else
+                Text(
+                  '${(goal.progress * 100).round()}%',
+                  style: context.texts.bodySmall?.copyWith(
+                    color: colors.success,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
             ],
           ),
         ],
@@ -293,6 +285,8 @@ class _GoalSheetState extends ConsumerState<_GoalSheet> {
   late final TextEditingController _target;
   DateTime? _deadline;
   bool _saving = false;
+
+  String get _currency => widget.goal?.currency ?? 'USD';
 
   @override
   void initState() {
@@ -329,9 +323,7 @@ class _GoalSheetState extends ConsumerState<_GoalSheet> {
 
   Future<void> _save() async {
     final title = _title.text.trim();
-    final target = double.tryParse(
-      _target.text.replaceAll(',', '').replaceAll('\$', '').trim(),
-    );
+    final target = _parseAmount(_target.text);
     if (title.isEmpty || target == null || target <= 0) {
       showAppSnackBar(
         context,
@@ -374,6 +366,7 @@ class _GoalSheetState extends ConsumerState<_GoalSheet> {
     return AppSheet(
       title: widget.goal == null ? 'New shared goal' : 'Edit goal',
       subtitle: 'Small deposits, shared momentum.',
+      art: AppArt.goals,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -381,15 +374,16 @@ class _GoalSheetState extends ConsumerState<_GoalSheet> {
             controller: _title,
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(labelText: 'What are you saving for?'),
+            decoration:
+                const InputDecoration(labelText: 'What are you saving for?'),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _target,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Target amount',
-              prefixText: '\$ ',
+              prefixText: '${_currencySymbol(_currency)} ',
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -448,21 +442,25 @@ class _ContributionSheetState extends ConsumerState<_ContributionSheet> {
   }
 
   Future<void> _save() async {
-    final amount = double.tryParse(
-      _amount.text.replaceAll(',', '').replaceAll('\$', '').trim(),
-    );
+    final amount = _parseAmount(_amount.text);
     if (amount == null || amount <= 0) {
       showAppSnackBar(context, 'Enter an amount above zero.', isError: true);
       return;
     }
     setState(() => _saving = true);
+    final completes = amount >= widget.goal.remaining;
     try {
       await ref.read(backendProvider).addToGoal(widget.goal.id, amount);
       if (!mounted) return;
-      showAppSnackBar(
-        context,
-        '${formatMoney(amount)} added to ${widget.goal.title}.',
-      );
+      if (completes) {
+        showHeartPop(context);
+        showAppSnackBar(context, 'Goal complete. Look at you two.');
+      } else {
+        showAppSnackBar(
+          context,
+          '${formatMoney(amount, currency: widget.goal.currency)} added to ${widget.goal.title}.',
+        );
+      }
       Navigator.of(context).pop();
     } catch (error) {
       if (mounted) {
@@ -475,9 +473,11 @@ class _ContributionSheetState extends ConsumerState<_ContributionSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final symbol = _currencySymbol(widget.goal.currency);
     return AppSheet(
       title: 'Add to goal',
       subtitle: widget.goal.title,
+      art: AppArt.goals,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -485,9 +485,9 @@ class _ContributionSheetState extends ConsumerState<_ContributionSheet> {
             controller: _amount,
             autofocus: true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Amount',
-              prefixText: '\$ ',
+              prefixText: '$symbol ',
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -497,7 +497,12 @@ class _ContributionSheetState extends ConsumerState<_ContributionSheet> {
             children: [
               for (final amount in const [10, 25, 50, 100])
                 ActionChip(
-                  label: Text(formatMoney(amount.toDouble())),
+                  label: Text(
+                    formatMoney(
+                      amount.toDouble(),
+                      currency: widget.goal.currency,
+                    ),
+                  ),
                   onPressed: () => _amount.text = amount.toString(),
                 ),
             ],

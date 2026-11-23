@@ -12,8 +12,8 @@ import '../../features/coupons/coupons_screen.dart';
 import '../../features/deep_talk/deep_talk_screen.dart';
 import '../../features/goals/goals_screen.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/live/live_distance_screen.dart';
 import '../../features/more/more_screen.dart';
-import '../../features/plans/plans_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/setup/setup_screen.dart';
 import '../../features/shell/app_shell.dart';
@@ -70,24 +70,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/plans',
-                builder: (context, state) => const PlansScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: '/connect',
                 builder: (context, state) => const ConnectScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/album',
-                builder: (context, state) => const AlbumScreen(),
               ),
             ],
           ),
@@ -100,6 +84,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/live',
+        builder: (context, state) => const LiveDistanceScreen(),
+      ),
+      GoRoute(
+        path: '/album',
+        builder: (context, state) => const AlbumScreen(),
       ),
       GoRoute(
         path: '/bucket',

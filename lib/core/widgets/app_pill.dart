@@ -28,21 +28,29 @@ class AppPill extends StatelessWidget {
         color: filled ? accent : accent.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: filled ? Colors.white : accent),
-            const SizedBox(width: 4),
-          ],
-          Text(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bounded = constraints.hasBoundedWidth;
+          final text = Text(
             label,
+            maxLines: 1,
+            overflow: bounded ? TextOverflow.ellipsis : TextOverflow.clip,
             style: context.texts.labelSmall?.copyWith(
               color: filled ? Colors.white : accent,
               fontWeight: FontWeight.w700,
             ),
-          ),
-        ],
+          );
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: filled ? Colors.white : accent),
+                const SizedBox(width: 4),
+              ],
+              if (bounded) Flexible(child: text) else text,
+            ],
+          );
+        },
       ),
     );
     if (onTap == null) return content;

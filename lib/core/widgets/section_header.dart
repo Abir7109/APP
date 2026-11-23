@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_illustration.dart';
+import 'app_pill.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
@@ -11,6 +13,7 @@ class SectionHeader extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.trailing,
+    this.art,
   });
 
   final String title;
@@ -18,13 +21,18 @@ class SectionHeader extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final Widget? trailing;
+  final AppArt? art;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        if (art != null) ...[
+          IllustrationTile(art!, size: 40, padding: 6),
+          const SizedBox(width: AppSpacing.md),
+        ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,12 +48,14 @@ class SectionHeader extends StatelessWidget {
             ],
           ),
         ),
-        if (actionLabel != null)
-          TextButton(
-            onPressed: onAction,
-            child: Text(actionLabel!),
-          ),
-        ?trailing,
+        if (actionLabel != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          AppPill(label: actionLabel!, onTap: onAction),
+        ],
+        if (trailing != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          trailing!,
+        ],
       ],
     );
   }

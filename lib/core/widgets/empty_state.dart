@@ -2,18 +2,19 @@ import 'package:material_ui/material_ui.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'app_illustration.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
-    required this.icon,
+    this.art = AppArt.empty,
     required this.title,
     required this.message,
     this.actionLabel,
     this.onAction,
   });
 
-  final IconData icon;
+  final AppArt art;
   final String title;
   final String message;
   final String? actionLabel;
@@ -28,22 +29,14 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 76,
-              height: 76,
-              decoration: BoxDecoration(
-                gradient: AppGradients.soft(colors),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 32, color: colors.primary),
-            ),
+            AppIllustration(art, size: 160),
             const SizedBox(height: AppSpacing.lg),
             Text(
               title,
               textAlign: TextAlign.center,
               style: context.texts.titleMedium,
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               message,
               textAlign: TextAlign.center,
@@ -54,7 +47,7 @@ class EmptyState extends StatelessWidget {
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.xl),
-              OutlinedButton(
+              FilledButton(
                 onPressed: onAction,
                 child: Text(actionLabel!),
               ),

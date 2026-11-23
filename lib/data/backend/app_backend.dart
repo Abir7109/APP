@@ -86,4 +86,27 @@ abstract class AppBackend {
   Future<void> toggleChore(String id, bool done);
 
   Future<void> deleteChore(String id);
+
+  Stream<LiveSession?> watchLiveSession();
+
+  Future<void> sendLiveRequest({
+    required String requesterName,
+    LivePoint? point,
+  });
+
+  Future<void> respondToLiveRequest({
+    required bool allow,
+    LivePoint? point,
+  });
+
+  Future<void> updateLiveLocation(LivePoint point);
+
+  Future<void> endLiveSession();
+
+  Future<void> simulateIncomingLiveRequest({
+    required String requesterName,
+    LivePoint? point,
+  }) async {
+    throw UnsupportedError('Live request simulation is only in demo mode.');
+  }
 }

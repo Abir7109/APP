@@ -21,6 +21,11 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.danger,
     required this.nude,
     required this.softPink,
+    required this.lilac,
+    required this.peach,
+    required this.butter,
+    required this.mint,
+    required this.tile,
     required this.onPrimary,
     required this.shadow,
   });
@@ -43,6 +48,11 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color danger;
   final Color nude;
   final Color softPink;
+  final Color lilac;
+  final Color peach;
+  final Color butter;
+  final Color mint;
+  final Color tile;
   final Color onPrimary;
   final Color shadow;
 
@@ -65,6 +75,11 @@ class AppColors extends ThemeExtension<AppColors> {
     danger: Color(0xFFFF2F66),
     nude: Color(0xFFFEEFEC),
     softPink: Color(0xFFFFF0FB),
+    lilac: Color(0xFFC9A7FF),
+    peach: Color(0xFFFFB199),
+    butter: Color(0xFFFFF3D6),
+    mint: Color(0xFFB8E6CF),
+    tile: Color(0xFFFFF0FB),
     onPrimary: Color(0xFFFFFFFF),
     shadow: Color(0x143E0554),
   );
@@ -88,6 +103,11 @@ class AppColors extends ThemeExtension<AppColors> {
     danger: Color(0xFFFF2F66),
     nude: Color(0xFF362420),
     softPink: Color(0xFF3E2436),
+    lilac: Color(0xFF6B4D8F),
+    peach: Color(0xFF7A4A3A),
+    butter: Color(0xFF4A3F22),
+    mint: Color(0xFF2A4A3A),
+    tile: Color(0xFF3E2436),
     onPrimary: Color(0xFFFFFFFF),
     shadow: Color(0x66000000),
   );
@@ -130,6 +150,11 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? danger,
     Color? nude,
     Color? softPink,
+    Color? lilac,
+    Color? peach,
+    Color? butter,
+    Color? mint,
+    Color? tile,
     Color? onPrimary,
     Color? shadow,
   }) {
@@ -152,6 +177,11 @@ class AppColors extends ThemeExtension<AppColors> {
       danger: danger ?? this.danger,
       nude: nude ?? this.nude,
       softPink: softPink ?? this.softPink,
+      lilac: lilac ?? this.lilac,
+      peach: peach ?? this.peach,
+      butter: butter ?? this.butter,
+      mint: mint ?? this.mint,
+      tile: tile ?? this.tile,
       onPrimary: onPrimary ?? this.onPrimary,
       shadow: shadow ?? this.shadow,
     );
@@ -179,6 +209,11 @@ class AppColors extends ThemeExtension<AppColors> {
       danger: Color.lerp(danger, other.danger, t)!,
       nude: Color.lerp(nude, other.nude, t)!,
       softPink: Color.lerp(softPink, other.softPink, t)!,
+      lilac: Color.lerp(lilac, other.lilac, t)!,
+      peach: Color.lerp(peach, other.peach, t)!,
+      butter: Color.lerp(butter, other.butter, t)!,
+      mint: Color.lerp(mint, other.mint, t)!,
+      tile: Color.lerp(tile, other.tile, t)!,
       onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
       shadow: Color.lerp(shadow, other.shadow, t)!,
     );

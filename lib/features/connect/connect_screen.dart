@@ -7,9 +7,13 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/dates.dart';
 import '../../core/utils/moods.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/avatar.dart';
-import '../../core/widgets/soft_icon.dart';
+import '../../core/widgets/hero_card.dart';
+import '../../core/widgets/mood_face.dart';
+import '../../core/widgets/section_header.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../data/models/models.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
@@ -33,8 +37,7 @@ class ConnectScreen extends ConsumerWidget {
         ref.watch(photoChallengesProvider).value ?? const <PhotoChallenge>[];
     final completedChallenges =
         challenges.where((challenge) => challenge.isComplete).length;
-    final checkIns =
-        ref.watch(checkInsProvider).value ?? const <CheckIn>[];
+    final checkIns = ref.watch(checkInsProvider).value ?? const <CheckIn>[];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Connect')),
@@ -43,185 +46,133 @@ class ConnectScreen extends ConsumerWidget {
           AppSpacing.xl,
           AppSpacing.sm,
           AppSpacing.xl,
-          AppSpacing.xxxl,
+          AppSpacing.navClearance,
         ),
         children: [
-          AppCard(
-            gradient: AppGradients.brand,
-            borderColor: Colors.transparent,
-            padding: const EdgeInsets.all(AppSpacing.xxl),
+          StaggeredEnter(
+            index: 0,
+            child: HeroCard(
+              title: 'How are you two?',
+              subtitle: 'Day $days of us · $streak day streak',
+              footer: Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.sm,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  AvatarPair(
+                    me: session.myName,
+                    partner: session.partnerName,
+                    size: 42,
+                  ),
+                  AppPill(
+                    label: '${session.myName} & ${session.partnerName}',
+                    color: Colors.white.withValues(alpha: 0.22),
+                    filled: true,
+                    icon: Icons.favorite_rounded,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          StaggeredEnter(
+            index: 1,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AvatarPair(
-                  me: session.myName,
-                  partner: session.partnerName,
-                  size: 54,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'How are you two,\nreally?',
-                  style: context.texts.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    height: 1.15,
+                SectionHeader(
+                  title: 'Daily pulse',
+                  trailing: Text(
+                    dateKeyOf(DateTime.now()),
+                    style: context.texts.bodySmall?.copyWith(
+                      color: colors.muted,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Day $days of us · $streak day check-in streak',
-                  style: context.texts.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Row(
-            children: [
-              Text(
-                'DAILY PULSE',
-                style: context.texts.labelSmall?.copyWith(
-                  color: colors.muted,
-                  letterSpacing: 1,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                dateKeyOf(DateTime.now()),
-                style: context.texts.bodySmall?.copyWith(color: colors.muted),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _PulseCard(
-                  name: session.myName,
-                  label: 'You',
-                   checkIn: myCheckIn,
-                   onTap: () => context.push('/check-in'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: _PulseCard(
-                  name: session.partnerName,
-                  label: 'Partner',
-                  checkIn: partnerCheckIn,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'KEEP TALKING',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _RitualTile(
-            icon: Icons.format_quote_rounded,
-            color: colors.primary,
-            title: 'Deep talk',
-            subtitle: deepTalks.isEmpty
-                ? 'Start your first conversation'
-                : '${deepTalks.length} answer${deepTalks.length == 1 ? '' : 's'} saved',
-            onTap: () => context.push('/deep-talk'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _RitualTile(
-            icon: Icons.confirmation_number_rounded,
-            color: colors.warning,
-            title: 'Kindness coupons',
-            subtitle: activeCoupons == 0
-                ? 'Offer something small'
-                : '$activeCoupons ready to redeem',
-            onTap: () => context.push('/coupons'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _RitualTile(
-            icon: Icons.photo_camera_rounded,
-            color: colors.info,
-            title: 'Photo challenges',
-            subtitle: '$completedChallenges of ${challenges.length} captured',
-            onTap: () => context.go('/album'),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'YOUR WEEK',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'A little pulse, day by day.',
-                  style: context.texts.titleSmall,
-                ),
-                const SizedBox(height: AppSpacing.lg),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final day in _lastSevenDays())
-                      _DayMood(
-                        day: day,
-                        checkIn: _checkInFor(
-                          checkIns,
-                          session.myId,
-                          dateKeyOf(day),
-                        ),
+                    Expanded(
+                      child: _PulseCard(
+                        name: session.myName,
+                        label: 'You',
+                        checkIn: myCheckIn,
+                        onTap: () => context.push('/check-in'),
                       ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: _PulseCard(
+                        name: session.partnerName,
+                        label: 'Partner',
+                        checkIn: partnerCheckIn,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
-          AppCard(
-            onTap: () => context.push('/check-in'),
-            color: colors.primary.withValues(alpha: 0.07),
-            borderColor: colors.primary.withValues(alpha: 0.25),
-            child: Row(
+          StaggeredEnter(
+            index: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SoftIcon(
-                  icon: Icons.favorite_rounded,
-                  color: colors.primary,
-                  size: 48,
+                const SectionHeader(title: 'Keep talking'),
+                const SizedBox(height: AppSpacing.sm),
+                _RitualTile(
+                  art: AppArt.deepTalk,
+                  title: 'Deep talk',
+                  subtitle: deepTalks.isEmpty
+                      ? 'Start your first conversation'
+                      : '${deepTalks.length} answer${deepTalks.length == 1 ? '' : 's'} saved',
+                  onTap: () => context.push('/deep-talk'),
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: AppSpacing.sm),
+                _RitualTile(
+                  art: AppArt.coupons,
+                  title: 'Kindness coupons',
+                  subtitle: activeCoupons == 0
+                      ? 'Offer something small'
+                      : '$activeCoupons ready to redeem',
+                  onTap: () => context.push('/coupons'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _RitualTile(
+                  art: AppArt.photos,
+                  title: 'Photo challenges',
+                  subtitle: '$completedChallenges of ${challenges.length} captured',
+                  onTap: () => context.push('/album'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          StaggeredEnter(
+            index: 3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SectionHeader(title: 'Your week'),
+                const SizedBox(height: AppSpacing.sm),
+                SectionCard(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        myCheckIn == null
-                            ? 'How are you today?'
-                            : 'Check-in saved for today',
-                        style: context.texts.titleSmall,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        myCheckIn == null
-                            ? 'Take ten seconds for yourself.'
-                            : 'Tap to update your mood or note.',
-                        style: context.texts.bodySmall?.copyWith(
-                          color: colors.muted,
+                      for (final day in _lastSevenDays())
+                        _DayMood(
+                          day: day,
+                          checkIn: _checkInFor(
+                            checkIns,
+                            session.myId,
+                            dateKeyOf(day),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded),
               ],
             ),
           ),
@@ -264,7 +215,7 @@ class _PulseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final mood = checkIn == null ? null : moodInfo(checkIn!.mood);
-    return AppCard(
+    return SectionCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -272,7 +223,7 @@ class _PulseCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              InitialsAvatar(name: name, size: 38),
+              InitialsAvatar(name: name, size: 36),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
@@ -303,7 +254,7 @@ class _PulseCard extends StatelessWidget {
                 Icon(
                   Icons.sentiment_neutral_rounded,
                   color: colors.muted,
-                  size: 22,
+                  size: 20,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -319,11 +270,21 @@ class _PulseCard extends StatelessWidget {
           else ...[
             Row(
               children: [
-                Icon(mood.icon, color: mood.color, size: 24),
+                MoodFace(
+                  mood: mood.value,
+                  color: mood.color,
+                  size: 24,
+                  animate: false,
+                ),
                 const SizedBox(width: 6),
-                Text(
-                  mood.label,
-                  style: context.texts.titleSmall?.copyWith(color: mood.color),
+                Expanded(
+                  child: Text(
+                    mood.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        context.texts.titleSmall?.copyWith(color: mood.color),
+                  ),
                 ),
               ],
             ),
@@ -354,15 +315,13 @@ class _PulseCard extends StatelessWidget {
 
 class _RitualTile extends StatelessWidget {
   const _RitualTile({
-    required this.icon,
-    required this.color,
+    required this.art,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
-  final IconData icon;
-  final Color color;
+  final AppArt art;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -370,11 +329,12 @@ class _RitualTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return AppCard(
+    return SectionCard(
       onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
-          SoftIcon(icon: icon, color: color, size: 46),
+          IllustrationTile(art, size: 46),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -384,6 +344,8 @@ class _RitualTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: context.texts.bodySmall?.copyWith(color: colors.muted),
                 ),
               ],
@@ -428,11 +390,14 @@ class _DayMood extends StatelessWidget {
               width: 1.2,
             ),
           ),
-          child: Icon(
-            mood?.icon ?? Icons.remove_rounded,
-            size: 18,
-            color: mood?.color ?? colors.muted,
-          ),
+          child: mood == null
+              ? Icon(Icons.remove_rounded, size: 18, color: colors.muted)
+              : MoodFace(
+                  mood: mood.value,
+                  color: mood.color,
+                  size: 24,
+                  animate: false,
+                ),
         ),
       ],
     );

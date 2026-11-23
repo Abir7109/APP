@@ -8,10 +8,11 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/dates.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/app_sheet.dart';
-import '../../core/widgets/avatar.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/list_row.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
 import '../../state/theme_provider.dart';
@@ -37,175 +38,157 @@ class SettingsScreen extends ConsumerWidget {
           AppSpacing.xxxl,
         ),
         children: [
-          AppCard(
-            child: Column(
+          SectionCard(
+            child: Row(
               children: [
-                AvatarPair(
-                  me: session.myName,
-                  partner: session.partnerName,
-                  size: 58,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(session.myName, style: context.texts.headlineSmall),
-                const SizedBox(height: 2),
-                Text(
-                  session.hasPartner
-                      ? 'Paired with ${session.partnerName}'
-                      : 'Waiting for your person',
-                  style: context.texts.bodySmall?.copyWith(color: colors.muted),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                OutlinedButton.icon(
-                  onPressed: () => _editName(context, ref, session.myName),
-                  icon: const Icon(Icons.edit_rounded, size: 18),
-                  label: const Text('Edit my name'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'OUR SPACE',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          AppCard(
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.lock_rounded, size: 20),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text('Pairing PIN', style: context.texts.titleSmall),
-                    const Spacer(),
-                    AppPill(
-                      label: session.pin,
-                      color: colors.primary,
-                      filled: true,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _copyPin(context, session.pin),
-                        icon: const Icon(Icons.copy_rounded, size: 18),
-                        label: const Text('Copy PIN'),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _sharePin(context, session.pin),
-                        icon: const Icon(Icons.ios_share_rounded, size: 18),
-                        label: const Text('Share'),
-                      ),
-                    ),
-                  ],
-                ),
-                if (anniversary != null) ...[
-                  const Divider(height: AppSpacing.xxl),
-                  _InfoRow(
-                    icon: Icons.favorite_rounded,
-                    label: 'Together since',
-                    value: longDate(anniversary),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _InfoRow(
-                    icon: Icons.timelapse_rounded,
-                    label: 'Days together',
-                    value: '$days',
-                  ),
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                _InfoRow(
-                  icon: Icons.storage_rounded,
-                  label: 'Storage',
-                  value: session.isDemo ? 'Demo mode' : 'Firebase',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'APPEARANCE',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Theme',
-                  style: context.texts.titleSmall,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    for (final entry in const [
-                      (ThemeMode.system, 'System', Icons.brightness_auto_rounded),
-                      (ThemeMode.light, 'Light', Icons.light_mode_rounded),
-                      (ThemeMode.dark, 'Dark', Icons.dark_mode_rounded),
-                    ])
-                      ChoiceChip(
-                        avatar: Icon(
-                          entry.$3,
-                          size: 17,
-                          color: themeMode == entry.$1
-                              ? Colors.white
-                              : colors.muted,
+                const AppIllustration(AppArt.mascots, size: 64),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(session.myName, style: context.texts.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(
+                        session.hasPartner
+                            ? 'Paired with ${session.partnerName}'
+                            : 'Waiting for your person',
+                        style: context.texts.bodySmall?.copyWith(
+                          color: colors.muted,
                         ),
-                        label: Text(entry.$2),
-                        selected: themeMode == entry.$1,
-                        onSelected: (_) => ref
-                            .read(themeModeProvider.notifier)
-                            .setMode(entry.$1),
                       ),
-                  ],
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Edit my name',
+                  onPressed: () =>
+                      _editName(context, ref, session.myName),
+                  icon: const Icon(Icons.edit_outlined, size: 20),
                 ),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'ABOUT',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
+          Text('Space', style: context.texts.titleMedium),
           const SizedBox(height: AppSpacing.sm),
-          AppCard(
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: Column(
               children: [
-                _InfoRow(
-                  icon: Icons.favorite_rounded,
-                  label: 'YOU&ME',
-                  value: 'Version 1.0.0',
+                ListRow(
+                  leading: Icon(Icons.lock_rounded, size: 20),
+                  title: 'Pairing PIN',
+                  trailing: AppPill(
+                    label: session.pin,
+                    color: colors.primary,
+                    filled: true,
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                _InfoRow(
-                  icon: Icons.shield_rounded,
-                  label: 'Privacy',
-                  value: session.isDemo ? 'On this device' : 'Firebase',
+                ListRow(
+                  leading: Icon(Icons.copy_rounded, size: 20),
+                  title: 'Copy PIN',
+                  onTap: () => _copyPin(context, session.pin),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Made for the two of you. No feeds, no noise — just the small things that keep you close.',
-                  style: context.texts.bodySmall?.copyWith(
-                    color: colors.muted,
-                    height: 1.5,
+                ListRow(
+                  leading: Icon(Icons.ios_share_rounded, size: 20),
+                  title: 'Share invite',
+                  onTap: () => _sharePin(context, session.pin),
+                  trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+                ),
+                if (anniversary != null)
+                  ListRow(
+                    leading: Icon(Icons.favorite_rounded, size: 20),
+                    title: 'Together since',
+                    subtitle: longDate(anniversary),
+                    trailing: Text(
+                      '$days days',
+                      style: context.texts.bodySmall?.copyWith(
+                        color: colors.muted,
+                      ),
+                    ),
+                  ),
+                ListRow(
+                  showDivider: false,
+                  leading: Icon(Icons.storage_rounded, size: 20),
+                  title: 'Storage',
+                  subtitle:
+                      session.isDemo ? 'On this device' : 'Shared Firebase space',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          Text('Appearance', style: context.texts.titleMedium),
+          const SizedBox(height: AppSpacing.sm),
+          SectionCard(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('Theme', style: context.texts.titleSmall),
+                ),
+                SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto_rounded),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode_rounded),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode_rounded),
+                    ),
+                  ],
+                  selected: {themeMode},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (selection) {
+                    ref
+                        .read(themeModeProvider.notifier)
+                        .setMode(selection.first);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          Text('About', style: context.texts.titleMedium),
+          const SizedBox(height: AppSpacing.sm),
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListRow(
+                  leading: Icon(Icons.favorite_rounded, size: 20),
+                  title: 'YOU&ME',
+                  trailing: Text(
+                    'Version 1.0.0',
+                    style: context.texts.bodySmall?.copyWith(
+                      color: colors.muted,
+                    ),
+                  ),
+                ),
+                ListRow(
+                  showDivider: false,
+                  leading: Icon(Icons.shield_rounded, size: 20),
+                  title: 'Privacy',
+                  subtitle: session.isDemo ? 'On this device' : 'Firebase',
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: AppSpacing.sm,
+                    bottom: AppSpacing.md,
+                  ),
+                  child: Text(
+                    'Made for the two of you. No feeds, no noise — just the small things that keep you close.',
+                    style: context.texts.bodySmall?.copyWith(
+                      color: colors.muted,
+                      height: 1.5,
+                    ),
                   ),
                 ),
               ],
@@ -213,30 +196,23 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xxl),
           Text(
-            'LEAVE',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.danger,
-              letterSpacing: 1,
-            ),
+            'Leave',
+            style: context.texts.titleMedium?.copyWith(color: colors.danger),
           ),
           const SizedBox(height: AppSpacing.sm),
-          AppCard(
+          SectionCard(
             borderColor: colors.danger.withValues(alpha: 0.35),
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.logout_rounded, color: colors.danger),
-              title: Text(
-                'Leave this space',
-                style: context.texts.titleSmall?.copyWith(color: colors.danger),
-              ),
-              subtitle: Text(
-                session.isDemo
-                    ? 'Return to setup. Your demo data stays on this device.'
-                    : 'You will stop syncing with this space.',
-                style: context.texts.bodySmall?.copyWith(color: colors.muted),
-              ),
-              trailing: Icon(Icons.chevron_right_rounded, color: colors.danger),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: ListRow(
+              showDivider: false,
               onTap: () => _leave(context, ref),
+              leading: Icon(Icons.logout_rounded, color: colors.danger),
+              title: 'Leave this space',
+              subtitle: session.isDemo
+                  ? 'Return to setup. Your demo data stays on this device.'
+                  : 'You will stop syncing with this space.',
+              trailing:
+                  Icon(Icons.chevron_right_rounded, color: colors.danger),
             ),
           ),
         ],
@@ -298,33 +274,6 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label, required this.value});
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: colors.muted),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          label,
-          style: context.texts.bodySmall?.copyWith(color: colors.muted),
-        ),
-        const Spacer(),
-        Text(value, style: context.texts.bodySmall?.copyWith(
-          fontWeight: FontWeight.w600,
-        )),
-      ],
-    );
-  }
-}
-
 class _NameSheet extends ConsumerStatefulWidget {
   const _NameSheet({required this.current});
 
@@ -341,7 +290,9 @@ class _NameSheetState extends ConsumerState<_NameSheet> {
   @override
   void initState() {
     super.initState();
-    _name = TextEditingController(text: widget.current == 'You' ? '' : widget.current);
+    _name = TextEditingController(
+      text: widget.current == 'You' ? '' : widget.current,
+    );
   }
 
   @override
@@ -373,6 +324,7 @@ class _NameSheetState extends ConsumerState<_NameSheet> {
     return AppSheet(
       title: 'Edit your name',
       subtitle: 'This is what your partner sees.',
+      art: AppArt.mascots,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

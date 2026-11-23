@@ -6,5 +6,6 @@ export 'couple.dart';
 export 'coupon.dart';
 export 'deep_talk_entry.dart';
 export 'goal.dart';
+export 'live_session.dart';
 export 'photo_challenge.dart';
 export 'time_capsule.dart';

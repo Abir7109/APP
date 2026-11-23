@@ -9,8 +9,12 @@ import '../../core/utils/ids.dart';
 import '../../core/utils/moods.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/avatar.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/heart_pop.dart';
+import '../../core/widgets/mood_chip.dart';
+import '../../core/widgets/mood_face.dart';
 import '../../data/models/models.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
@@ -74,7 +78,12 @@ class _CheckInFormState extends ConsumerState<_CheckInForm> {
     try {
       await ref.read(backendProvider).saveCheckIn(checkIn);
       if (!mounted) return;
-      showAppSnackBar(context, 'Check-in saved.');
+      showHeartPop(context);
+      final streak = ref.read(myStreakProvider);
+      showAppSnackBar(
+        context,
+        "Saved. That's $streak day${streak == 1 ? '' : 's'}.",
+      );
       context.pop();
     } catch (error) {
       if (mounted) {
@@ -92,6 +101,7 @@ class _CheckInFormState extends ConsumerState<_CheckInForm> {
     final selected = moodInfo(_mood);
     final myCheckIns = ref.watch(myCheckInsProvider);
     final streak = ref.watch(myStreakProvider);
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Daily check-in')),
@@ -113,26 +123,76 @@ class _CheckInFormState extends ConsumerState<_CheckInForm> {
             style: context.texts.bodySmall?.copyWith(color: colors.muted),
           ),
           const SizedBox(height: AppSpacing.xl),
-          for (final mood in moodScale) ...[
-            _MoodOption(
-              mood: mood,
-              selected: _mood == mood.value,
-              onTap: () => setState(() => _mood = mood.value),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final chipSize =
+                  ((constraints.maxWidth / 5) - 8).clamp(38.0, 56.0);
+              final chips = [
+                for (final mood in moodScale)
+                  MoodChip(
+                    mood: mood,
+                    size: chipSize,
+                    selected: _mood == mood.value,
+                    onTap: () => setState(() => _mood = mood.value),
+                  ),
+              ];
+              if (largeText) {
+                return Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: chips,
+                );
+              }
+              return Row(
+                children: [
+                  for (final chip in chips) Expanded(child: chip),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: AppSpacing.lg),
-          AppCard(
-            color: selected.color.withValues(alpha: 0.08),
-            borderColor: selected.color.withValues(alpha: 0.3),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: selected.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              border: Border.all(
+                color: selected.color.withValues(alpha: 0.2),
+              ),
+            ),
             child: Row(
               children: [
-                Icon(selected.icon, color: selected.color, size: 30),
+                MoodFace(
+                  mood: _mood,
+                  color: selected.color,
+                  size: 42,
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Text(
-                    'Today you feel ${selected.label.toLowerCase()}.',
-                    style: context.texts.titleSmall,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) {
+                      final slide = Tween<Offset>(
+                        begin: const Offset(0, 0.22),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: slide,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Today you feel ${selected.label.toLowerCase()}.',
+                      key: ValueKey(_mood),
+                      style: context.texts.titleSmall,
+                    ),
                   ),
                 ),
               ],
@@ -151,46 +211,44 @@ class _CheckInFormState extends ConsumerState<_CheckInForm> {
           ),
           const SizedBox(height: AppSpacing.xl),
           GradientButton(
-            label: widget.existing == null ? 'Save my check-in' : 'Update check-in',
+            label:
+                widget.existing == null ? 'Save my check-in' : 'Update check-in',
             icon: Icons.favorite_rounded,
             loading: _saving,
             onPressed: _save,
           ),
           const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'YOUR LAST 14 DAYS',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
+          Text('Last 14 days', style: context.texts.titleMedium),
           const SizedBox(height: AppSpacing.sm),
-          AppCard(
+          SectionCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.local_fire_department_rounded,
-                      color: colors.warning,
-                      size: 20,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      '$streak day streak',
-                      style: context.texts.titleSmall,
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${myCheckIns.length} total',
-                      style: context.texts.bodySmall?.copyWith(
-                        color: colors.muted,
+                    const AppIllustration(AppArt.mascots, size: 56),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$streak day${streak == 1 ? '' : 's'} in a row',
+                            style: context.texts.titleSmall,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${myCheckIns.length} check-ins so far',
+                            style: context.texts.bodySmall?.copyWith(
+                              color: colors.muted,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.lg),
                 SizedBox(
                   height: 72,
                   child: ListView.separated(
@@ -219,15 +277,9 @@ class _CheckInFormState extends ConsumerState<_CheckInForm> {
           ),
           if (session.hasPartner) ...[
             const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'PARTNER TODAY',
-              style: context.texts.labelSmall?.copyWith(
-                color: colors.muted,
-                letterSpacing: 1,
-              ),
-            ),
+            Text('Partner today', style: context.texts.titleMedium),
             const SizedBox(height: AppSpacing.sm),
-            AppCard(
+            SectionCard(
               child: Row(
                 children: [
                   InitialsAvatar(name: session.partnerName, size: 44),
@@ -246,10 +298,11 @@ class _CheckInFormState extends ConsumerState<_CheckInForm> {
                           ),
                   ),
                   if (partnerCheckIn != null)
-                    Icon(
-                      moodInfo(partnerCheckIn.mood).icon,
+                    MoodFace(
+                      mood: partnerCheckIn.mood,
                       color: moodInfo(partnerCheckIn.mood).color,
-                      size: 28,
+                      size: 32,
+                      animate: false,
                     ),
                 ],
               ),
@@ -298,11 +351,14 @@ class _HistoryDay extends StatelessWidget {
               width: isToday ? 2 : 1.2,
             ),
           ),
-          child: Icon(
-            mood?.icon ?? Icons.remove_rounded,
-            size: 18,
-            color: mood?.color ?? colors.muted,
-          ),
+          child: mood == null
+              ? Icon(Icons.remove_rounded, size: 18, color: colors.muted)
+              : MoodFace(
+                  mood: mood.value,
+                  color: mood.color,
+                  size: 24,
+                  animate: false,
+                ),
         ),
         const SizedBox(height: 2),
         Text(
@@ -313,57 +369,6 @@ class _HistoryDay extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _MoodOption extends StatelessWidget {
-  const _MoodOption({
-    required this.mood,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final MoodInfo mood;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return AppCard(
-      onTap: onTap,
-      borderColor: selected ? mood.color : colors.border,
-      color: selected ? mood.color.withValues(alpha: 0.08) : colors.card,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: mood.color.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(mood.icon, color: mood.color, size: 26),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(mood.label, style: context.texts.titleMedium),
-          ),
-          if (selected)
-            Icon(Icons.check_circle_rounded, color: mood.color, size: 24)
-          else
-            Icon(
-              Icons.circle_outlined,
-              color: colors.border,
-              size: 24,
-            ),
-        ],
-      ),
     );
   }
 }

@@ -456,6 +456,99 @@ class FirebaseBackend implements AppBackend {
   @override
   Future<void> deleteChore(String id) => _deleteDocument('chores', id);
 
+  @override
+  Stream<LiveSession?> watchLiveSession() async* {
+    if (_coupleId == null) {
+      await getCouple();
+    }
+    final collection = _coupleCollection('live');
+    if (collection == null) {
+      yield null;
+      return;
+    }
+    yield* collection.doc('current').snapshots().map((snapshot) {
+      if (!snapshot.exists) return null;
+      return LiveSession.fromMap({...snapshot.data()!, 'id': snapshot.id});
+    });
+  }
+
+  Future<DocumentReference<Map<String, dynamic>>> _liveDocument() async {
+    if (_coupleId == null) {
+      await getCouple();
+    }
+    final collection = _coupleCollection('live');
+    if (collection == null) throw StateError('No space linked yet.');
+    return collection.doc('current');
+  }
+
+  @override
+  Future<void> sendLiveRequest({
+    required String requesterName,
+    LivePoint? point,
+  }) async {
+    final uid = _requireUid();
+    final doc = await _liveDocument();
+    final now = DateTime.now();
+    final points = <String, dynamic>{};
+    if (point != null) points[uid] = point.toMap();
+    await doc.set({
+      'requesterId': uid,
+      'requesterName': requesterName,
+      'status': LiveSessionStatus.pending.wireName,
+      'createdAt': now.toIso8601String(),
+      'respondedAt': null,
+      'expiresAt': now.add(const Duration(minutes: 3)).toIso8601String(),
+      'points': points,
+    });
+  }
+
+  @override
+  Future<void> respondToLiveRequest({
+    required bool allow,
+    LivePoint? point,
+  }) async {
+    final uid = _requireUid();
+    final doc = await _liveDocument();
+    final now = DateTime.now();
+    final updates = <String, dynamic>{
+      'status': allow
+          ? LiveSessionStatus.allowed.wireName
+          : LiveSessionStatus.denied.wireName,
+      'respondedAt': now.toIso8601String(),
+    };
+    if (allow) {
+      updates['expiresAt'] =
+          now.add(const Duration(minutes: 15)).toIso8601String();
+      if (point != null) updates['points.$uid'] = point.toMap();
+    }
+    await doc.update(updates);
+  }
+
+  @override
+  Future<void> updateLiveLocation(LivePoint point) async {
+    final uid = _requireUid();
+    final doc = await _liveDocument();
+    await doc.update({'points.$uid': point.toMap()});
+  }
+
+  @override
+  Future<void> endLiveSession() async {
+    final doc = await _liveDocument();
+    await doc.update({
+      'status': LiveSessionStatus.ended.wireName,
+      'respondedAt': DateTime.now().toIso8601String(),
+      'points': <String, dynamic>{},
+    });
+  }
+
+  @override
+  Future<void> simulateIncomingLiveRequest({
+    required String requesterName,
+    LivePoint? point,
+  }) async {
+    throw UnsupportedError('Live request simulation is only in demo mode.');
+  }
+
   String _generatePin() {
     final random = Random.secure();
     return (100000 + random.nextInt(900000)).toString();

@@ -11,6 +11,10 @@ abstract final class AppSpacing {
   static const double xxl = 24;
   static const double xxxl = 32;
   static const double huge = 48;
+
+  /// Space to leave under shell pages so content can scroll clear of the
+  /// floating capsule nav.
+  static const double navClearance = 120;
 }
 
 abstract final class AppRadii {
@@ -22,14 +26,17 @@ abstract final class AppRadii {
 }
 
 abstract final class AppDurations {
+  static const press = Duration(milliseconds: 90);
   static const fast = Duration(milliseconds: 160);
   static const normal = Duration(milliseconds: 240);
+  static const pop = Duration(milliseconds: 260);
+  static const enter = Duration(milliseconds: 320);
   static const slow = Duration(milliseconds: 380);
 }
 
 abstract final class AppGradients {
   static const brand = LinearGradient(
-    colors: [Color(0xFFFF4576), Color(0xFFFF7B83), Color(0xFFFFB199)],
+    colors: [Color(0xFFFF4576), Color(0xFFFF7B83)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

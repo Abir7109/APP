@@ -6,10 +6,12 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/ids.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/app_sheet.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../data/models/models.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
@@ -27,7 +29,6 @@ class _BucketScreenState extends ConsumerState<BucketScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     final items = ref.watch(bucketItemsProvider).value ?? const <BucketItem>[];
     final filtered = _filter == null
         ? items
@@ -83,10 +84,9 @@ class _BucketScreenState extends ConsumerState<BucketScreen> {
           Expanded(
             child: items.isEmpty
                 ? EmptyState(
-                    icon: Icons.explore_rounded,
-                    title: 'Your list is wide open',
-                    message:
-                        'Add the places, meals, and small adventures you want to share.',
+                    art: AppArt.bucket,
+                    title: 'Nothing on the list yet',
+                    message: 'Add the first little plan.',
                     actionLabel: 'Add an idea',
                     onAction: () => _showEditor(context, ref),
                   )
@@ -100,31 +100,29 @@ class _BucketScreenState extends ConsumerState<BucketScreen> {
                     children: [
                       if (open.isNotEmpty) ...[
                         Text(
-                          'TO DO · ${open.length}',
-                          style: context.texts.labelSmall?.copyWith(
-                            color: colors.muted,
-                            letterSpacing: 1,
-                          ),
+                          'To do · ${open.length}',
+                          style: context.texts.titleMedium,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        for (final item in open) ...[
-                          _BucketCard(
-                            item: item,
-                            onToggle: () => _toggle(ref, item),
-                            onEdit: () => _showEditor(context, ref, item: item),
-                            onDelete: () => _delete(context, ref, item),
+                        for (var index = 0; index < open.length; index++) ...[
+                          StaggeredEnter(
+                            index: index,
+                            child: _BucketCard(
+                              item: open[index],
+                              onToggle: () => _toggle(ref, open[index]),
+                              onEdit: () => _showEditor(context, ref,
+                                  item: open[index]),
+                              onDelete: () => _delete(context, ref, open[index]),
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
+                          const SizedBox(height: AppSpacing.sm),
                         ],
                       ],
                       if (done.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.md),
                         Text(
-                          'DONE · ${done.length}',
-                          style: context.texts.labelSmall?.copyWith(
-                            color: colors.muted,
-                            letterSpacing: 1,
-                          ),
+                          'Done · ${done.length}',
+                          style: context.texts.titleMedium,
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         for (final item in done) ...[
@@ -134,7 +132,7 @@ class _BucketScreenState extends ConsumerState<BucketScreen> {
                             onEdit: () => _showEditor(context, ref, item: item),
                             onDelete: () => _delete(context, ref, item),
                           ),
-                          const SizedBox(height: AppSpacing.md),
+                          const SizedBox(height: AppSpacing.sm),
                         ],
                       ],
                     ],
@@ -217,32 +215,46 @@ class _BucketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return AppCard(
+    return SectionCard(
       onTap: onEdit,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: item.done ? colors.success : Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: item.done ? colors.success : colors.border,
-                  width: 1.6,
+          Semantics(
+            button: true,
+            label: item.done ? 'Mark as not done' : 'Mark as done',
+            child: InkWell(
+              onTap: onToggle,
+              borderRadius: BorderRadius.circular(999),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: item.done ? colors.success : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: item.done ? colors.success : colors.border,
+                        width: 1.6,
+                      ),
+                    ),
+                    child: item.done
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 17,
+                          )
+                        : null,
+                  ),
                 ),
               ),
-              child: item.done
-                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 19)
-                  : null,
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

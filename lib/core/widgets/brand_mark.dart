@@ -18,34 +18,27 @@ class BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final mark = Container(
+    // The mark is a transparent, keyed illustration now: it floats on any
+    // surface instead of sitting inside a tinted square, so no container
+    // decoration, shadow, or clipping is needed.
+    final mark = SizedBox(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(
-            color: colors.primary.withValues(alpha: 0.24),
-            blurRadius: size * 0.4,
-            offset: Offset(0, size * 0.14),
+      child: Image.asset(
+        'assets/brand/heart_icon.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) => Container(
+          decoration: BoxDecoration(
+            gradient: AppGradients.brand,
+            borderRadius: BorderRadius.circular(size * 0.28),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        child: Image.asset(
-          'assets/brand/heart_icon.png',
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-          errorBuilder: (context, error, stackTrace) => Container(
-            decoration: const BoxDecoration(gradient: AppGradients.brand),
-            child: Icon(
-              Icons.favorite_rounded,
-              color: Colors.white,
-              size: size * 0.5,
-            ),
+          child: Icon(
+            Icons.favorite_rounded,
+            color: Colors.white,
+            size: size * 0.5,
           ),
         ),
       ),

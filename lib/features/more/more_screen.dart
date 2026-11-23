@@ -1,14 +1,22 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/dates.dart';
+import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
-import '../../core/widgets/avatar.dart';
+import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/hero_card.dart';
+import '../../core/widgets/list_row.dart';
 import '../../core/widgets/soft_icon.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../state/data_providers.dart';
+import '../../state/live_providers.dart';
 import '../../state/session_provider.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -19,20 +27,10 @@ class MoreScreen extends ConsumerWidget {
     final colors = context.colors;
     final session = ref.watch(sessionProvider);
     final days = ref.watch(daysTogetherProvider);
-    final bucket = ref.watch(openBucketItemsProvider).length;
-    final capsules = ref.watch(capsulesProvider).value ?? const [];
-    final lockedCapsules = capsules.where((capsule) => capsule.isLocked).length;
-    final coupons =
-        (ref.watch(couponsProvider).value ?? const [])
-            .where((coupon) => !coupon.redeemed)
-            .length;
-    final goals = ref.watch(goalsProvider).value ?? const [];
-    final openGoals = goals.where((goal) => !goal.isComplete).length;
-    final chores =
-        (ref.watch(choresProvider).value ?? const [])
-            .where((chore) => !chore.done)
-            .length;
-    final deepTalks = ref.watch(deepTalkProvider).value ?? const [];
+    final anniversary = session.couple?.anniversary;
+    final liveBusy = ref.watch(
+      liveDistanceControllerProvider.select((state) => state.busy),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
@@ -41,183 +39,227 @@ class MoreScreen extends ConsumerWidget {
           AppSpacing.xl,
           AppSpacing.sm,
           AppSpacing.xl,
-          AppSpacing.xxxl,
+          AppSpacing.navClearance,
         ),
         children: [
-          AppCard(
-            gradient: AppGradients.brand,
-            borderColor: Colors.transparent,
-            padding: const EdgeInsets.all(AppSpacing.xxl),
-            child: Column(
-              children: [
-                AvatarPair(
-                  me: session.myName,
-                  partner: session.partnerName,
-                  size: 62,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  '${session.myName} & ${session.partnerName}',
-                  style: context.texts.headlineSmall?.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Day $days of us',
-                  style: context.texts.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.82),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppPill(
-                  label: 'PIN ${session.pin}',
-                  color: Colors.white.withValues(alpha: 0.22),
-                  filled: true,
-                  icon: Icons.lock_rounded,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'YOUR SPACE',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _MoreTile(
-            icon: Icons.explore_rounded,
-            color: colors.success,
-            title: 'Bucket list',
-            subtitle: '$bucket ideas waiting',
-            onTap: () => context.push('/bucket'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _MoreTile(
-            icon: Icons.mail_rounded,
-            color: colors.warning,
-            title: 'Time capsules',
-            subtitle: '$lockedCapsules sealed letters',
-            onTap: () => context.push('/capsules'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _MoreTile(
-            icon: Icons.confirmation_number_rounded,
-            color: colors.primary,
-            title: 'Kindness coupons',
-            subtitle: '$coupons ready to redeem',
-            onTap: () => context.push('/coupons'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _MoreTile(
-            icon: Icons.savings_rounded,
-            color: colors.info,
-            title: 'Shared goals',
-            subtitle: '$openGoals goals in progress',
-            onTap: () => context.push('/goals'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _MoreTile(
-            icon: Icons.cleaning_services_rounded,
-            color: colors.tintDarker,
-            title: 'Chores & errands',
-            subtitle: '$chores things to do',
-            onTap: () => context.push('/chores'),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _MoreTile(
-            icon: Icons.forum_rounded,
-            color: colors.primary,
-            title: 'Deep talk',
-            subtitle: '${deepTalks.length} answers saved',
-            onTap: () => context.push('/deep-talk'),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Text(
-            'SETTINGS',
-            style: context.texts.labelSmall?.copyWith(
-              color: colors.muted,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _MoreTile(
-            icon: Icons.settings_rounded,
-            color: colors.muted,
-            title: 'Settings',
-            subtitle: 'Profile, theme, PIN, and space',
-            onTap: () => context.push('/settings'),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          AppCard(
-            color: colors.primary.withValues(alpha: 0.06),
-            borderColor: colors.primary.withValues(alpha: 0.2),
-            child: Row(
-              children: [
-                Icon(Icons.favorite_rounded, color: colors.primary),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    session.isDemo
-                        ? 'Demo mode: your data stays on this device.'
-                        : 'Connected to your shared Firebase space.',
-                    style: context.texts.bodySmall?.copyWith(
-                      color: colors.muted,
-                      height: 1.4,
+          StaggeredEnter(
+            index: 0,
+            child: HeroCard(
+              backgroundColor: colors.softPink,
+              art: AppArt.mascots,
+              artSize: 104,
+              eyebrow: 'DAY $days',
+              title: '${session.myName} & ${session.partnerName}',
+              subtitle: session.isDemo
+                  ? 'A demo space, kept on this device.'
+                  : 'Your shared space, synced for two.',
+              footer: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  if (session.pin.isNotEmpty)
+                    AppPill(
+                      label: 'PIN ${session.pin}',
+                      color: colors.primary,
+                      filled: true,
+                      icon: Icons.lock_rounded,
                     ),
-                  ),
-                ),
-              ],
+                  if (session.hasPartner)
+                    AppPill(
+                      label: 'Paired',
+                      color: colors.success,
+                      icon: Icons.favorite_rounded,
+                    ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MoreTile extends StatelessWidget {
-  const _MoreTile({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return AppCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          SoftIcon(icon: icon, color: color, size: 46),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
+          const SizedBox(height: AppSpacing.xxl),
+          StaggeredEnter(
+            index: 1,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: context.texts.titleSmall),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: context.texts.bodySmall?.copyWith(color: colors.muted),
+                Text('Your space', style: context.texts.titleMedium),
+                const SizedBox(height: AppSpacing.sm),
+                SectionCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: Column(
+                    children: [
+                      ListRow(
+                        leading: SoftIcon(
+                          icon: Icons.settings_rounded,
+                          color: colors.muted,
+                          size: 36,
+                        ),
+                        title: 'Settings',
+                        subtitle: 'Profile, theme, PIN, and space',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: colors.muted,
+                        ),
+                        onTap: () => context.push('/settings'),
+                      ),
+                      if (session.pin.isNotEmpty)
+                        ListRow(
+                          leading: SoftIcon(
+                            icon: Icons.key_rounded,
+                            color: colors.primary,
+                            size: 36,
+                          ),
+                          title: 'Invite code',
+                          subtitle: 'PIN ${session.pin} · tap to copy',
+                          trailing: Icon(
+                            Icons.copy_rounded,
+                            size: 18,
+                            color: colors.muted,
+                          ),
+                          onTap: () {
+                            Clipboard.setData(
+                              ClipboardData(text: session.pin),
+                            );
+                            showAppSnackBar(context, 'PIN copied.');
+                          },
+                        ),
+                      ListRow(
+                        leading: SoftIcon(
+                          icon: Icons.near_me_rounded,
+                          color: colors.primary,
+                          size: 36,
+                        ),
+                        title: 'Live distance',
+                        subtitle: 'Consent-first, 15 minutes at a time',
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: colors.muted,
+                        ),
+                        onTap: () => context.push('/live'),
+                      ),
+                      if (anniversary != null)
+                        ListRow(
+                          showDivider: false,
+                          leading: SoftIcon(
+                            icon: Icons.cake_outlined,
+                            color: colors.primary,
+                            size: 36,
+                          ),
+                          title: 'Your anniversary',
+                          subtitle:
+                              '${longDate(anniversary)} · Day $days together',
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: colors.muted),
+          const SizedBox(height: AppSpacing.xxl),
+          StaggeredEnter(
+            index: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Good to know', style: context.texts.titleMedium),
+                const SizedBox(height: AppSpacing.sm),
+                SectionCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: Column(
+                    children: [
+                      ListRow(
+                        leading: SoftIcon(
+                          icon: Icons.lock_outline_rounded,
+                          color: colors.success,
+                          size: 36,
+                        ),
+                        title: 'Location stays private',
+                        subtitle:
+                            'Shared only when you both allow it. It ends by itself.',
+                      ),
+                      ListRow(
+                        showDivider: false,
+                        leading: SoftIcon(
+                          icon: Icons.favorite_rounded,
+                          color: colors.primary,
+                          size: 36,
+                        ),
+                        title: 'Made for two',
+                        subtitle: 'A quiet home for your relationship.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (session.isDemo) ...[
+            const SizedBox(height: AppSpacing.xxl),
+            StaggeredEnter(
+              index: 3,
+              child: SectionCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const IllustrationTile(AppArt.mascots, size: 52),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Demo playground',
+                                style: context.texts.titleSmall,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Feel the other side of a live request without a second phone.',
+                                style: context.texts.bodySmall?.copyWith(
+                                  color: colors.muted,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    GradientButton(
+                      label: 'Preview an incoming request',
+                      icon: Icons.notifications_active_outlined,
+                      loading: liveBusy,
+                      height: 48,
+                      onPressed: liveBusy
+                          ? null
+                          : () => ref
+                              .read(liveDistanceControllerProvider.notifier)
+                              .previewIncoming(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.xxl),
+          Row(
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 14, color: colors.muted),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  session.isDemo
+                      ? 'Demo mode: your data stays on this device.'
+                      : 'Connected to your shared Firebase space.',
+                  style: context.texts.bodySmall?.copyWith(color: colors.muted),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

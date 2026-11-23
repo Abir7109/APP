@@ -32,10 +32,14 @@ class DemoBackend implements AppBackend {
   static const _photosKey = 'demo.photos';
   static const _deepTalkKey = 'demo.deeptalk';
   static const _choresKey = 'demo.chores';
+  static const _liveKey = 'demo.live';
 
   AppUser? _user;
   AppUser? _partner;
   Couple? _couple;
+  LiveSession? _liveSession;
+  Timer? _liveAllowTimer;
+  Timer? _liveDriftTimer;
 
   List<BucketItem> _bucket = [];
   List<CheckIn> _checkIns = [];
@@ -55,6 +59,7 @@ class DemoBackend implements AppBackend {
   final _photosController = StreamController<List<PhotoChallenge>>.broadcast();
   final _deepTalkController = StreamController<List<DeepTalkEntry>>.broadcast();
   final _choresController = StreamController<List<Chore>>.broadcast();
+  final _liveController = StreamController<LiveSession?>.broadcast();
 
   bool _initialized = false;
 
@@ -92,6 +97,7 @@ class DemoBackend implements AppBackend {
       );
       await _persistPartner();
       await _seedIfNeeded();
+      _resumeLiveSession();
     }
   }
 
@@ -212,6 +218,11 @@ class DemoBackend implements AppBackend {
     final user = _user;
     if (user == null) return;
     _user = user.copyWith(clearCoupleId: true);
+    _liveAllowTimer?.cancel();
+    _liveDriftTimer?.cancel();
+    _liveSession = null;
+    await _prefs.remove(_liveKey);
+    _liveController.add(null);
     await _persistUser();
     _partnerController.add(null);
   }
@@ -237,6 +248,7 @@ class DemoBackend implements AppBackend {
     _photos = _readList(_photosKey, PhotoChallenge.fromMap);
     _deepTalk = _readList(_deepTalkKey, DeepTalkEntry.fromMap);
     _chores = _readList(_choresKey, Chore.fromMap);
+    _liveSession = _readObject(_liveKey, LiveSession.fromMap);
   }
 
   T? _readObject<T>(String key, T Function(Map<String, dynamic>) fromMap) {
@@ -322,6 +334,11 @@ class DemoBackend implements AppBackend {
     _photos = [];
     _deepTalk = [];
     _chores = [];
+    _liveAllowTimer?.cancel();
+    _liveDriftTimer?.cancel();
+    _liveSession = null;
+    await _prefs.remove(_liveKey);
+    _liveController.add(null);
     await _persistAll();
   }
 
@@ -589,6 +606,246 @@ class DemoBackend implements AppBackend {
     _chores.removeWhere((chore) => chore.id == id);
     await _writeList(_choresKey, _chores, (item) => item.toMap());
     _choresController.add(List.unmodifiable(_chores));
+  }
+
+  String get _uid => _user?.id ?? _meId;
+
+  @override
+  Stream<LiveSession?> watchLiveSession() async* {
+    yield _liveSession;
+    yield* _liveController.stream;
+  }
+
+  @override
+  Future<void> sendLiveRequest({
+    required String requesterName,
+    LivePoint? point,
+  }) async {
+    final now = DateTime.now();
+    _liveAllowTimer?.cancel();
+    _liveDriftTimer?.cancel();
+    final points = <String, LivePoint>{};
+    if (point != null) points[_uid] = point;
+    _liveSession = LiveSession(
+      id: 'current',
+      requesterId: _uid,
+      requesterName: requesterName,
+      status: LiveSessionStatus.pending,
+      createdAt: now,
+      expiresAt: now.add(const Duration(minutes: 3)),
+      points: points,
+    );
+    await _persistLive();
+    _emitLive();
+
+    _liveAllowTimer = Timer(const Duration(seconds: 4), () {
+      final session = _liveSession;
+      if (session == null || !session.isPending) return;
+      if (session.requesterId != _uid) return;
+      unawaited(_demoAllow());
+    });
+  }
+
+  Future<void> _demoAllow() async {
+    final session = _liveSession;
+    final partner = _partner;
+    if (session == null || partner == null || !session.isPending) return;
+    final requesterPoint = session.points[session.requesterId];
+    if (requesterPoint == null) return;
+    final now = DateTime.now();
+    _liveSession = session.copyWith(
+      status: LiveSessionStatus.allowed,
+      respondedAt: now,
+      expiresAt: now.add(const Duration(minutes: 15)),
+      points: {
+        ...session.points,
+        partner.id: _nearbyPoint(requesterPoint),
+      },
+    );
+    await _persistLive();
+    _emitLive();
+    _startDemoDrift();
+  }
+
+  @override
+  Future<void> respondToLiveRequest({
+    required bool allow,
+    LivePoint? point,
+  }) async {
+    final session = _liveSession;
+    if (session == null) return;
+    _liveAllowTimer?.cancel();
+    final now = DateTime.now();
+    if (!allow) {
+      _liveSession = session.copyWith(
+        status: LiveSessionStatus.denied,
+        respondedAt: now,
+      );
+      await _persistLive();
+      _emitLive();
+      return;
+    }
+
+    final points = Map<String, LivePoint>.from(session.points);
+    if (point != null) points[_uid] = point;
+    final partnerId = _partner?.id;
+    if (partnerId != null && !points.containsKey(partnerId) && point != null) {
+      points[partnerId] = _nearbyPoint(point);
+    }
+    _liveSession = session.copyWith(
+      status: LiveSessionStatus.allowed,
+      respondedAt: now,
+      expiresAt: now.add(const Duration(minutes: 15)),
+      points: points,
+    );
+    await _persistLive();
+    _emitLive();
+    _startDemoDrift();
+  }
+
+  @override
+  Future<void> updateLiveLocation(LivePoint point) async {
+    final session = _liveSession;
+    if (session == null || !session.isAllowed) return;
+    _liveSession = session.copyWith(
+      points: {...session.points, _uid: point},
+    );
+    await _persistLive();
+    _emitLive();
+  }
+
+  @override
+  Future<void> endLiveSession() async {
+    final session = _liveSession;
+    if (session == null) return;
+    _liveAllowTimer?.cancel();
+    _liveDriftTimer?.cancel();
+    _liveSession = session.copyWith(
+      status: LiveSessionStatus.ended,
+      respondedAt: DateTime.now(),
+      points: const {},
+    );
+    await _persistLive();
+    _emitLive();
+  }
+
+  @override
+  Future<void> simulateIncomingLiveRequest({
+    required String requesterName,
+    LivePoint? point,
+  }) async {
+    final partner = _partner;
+    if (partner == null) {
+      throw StateError('Your partner has not joined yet.');
+    }
+    _liveAllowTimer?.cancel();
+    _liveDriftTimer?.cancel();
+    final now = DateTime.now();
+    final origin = point ??
+        LivePoint(
+          latitude: 48.8584,
+          longitude: 2.2945,
+          updatedAt: now,
+          accuracy: 20,
+        );
+    _liveSession = LiveSession(
+      id: 'current',
+      requesterId: partner.id,
+      requesterName: requesterName.trim().isEmpty
+          ? partner.firstName
+          : requesterName.trim(),
+      status: LiveSessionStatus.pending,
+      createdAt: now,
+      expiresAt: now.add(const Duration(minutes: 3)),
+      points: {partner.id: origin},
+    );
+    await _persistLive();
+    _emitLive();
+  }
+
+  void _resumeLiveSession() {
+    final session = _liveSession;
+    if (session == null) return;
+    if (session.isAllowed) {
+      final limit = session.expiresAt;
+      if (limit != null && !DateTime.now().isBefore(limit)) {
+        unawaited(endLiveSession());
+      } else {
+        _startDemoDrift();
+      }
+      return;
+    }
+    if (session.isPending && !session.isExpired) {
+      final elapsed = DateTime.now().difference(session.createdAt);
+      final remaining = const Duration(seconds: 4) - elapsed;
+      _liveAllowTimer?.cancel();
+      _liveAllowTimer = Timer(
+        remaining.isNegative ? Duration.zero : remaining,
+        () => unawaited(_demoAllow()),
+      );
+    }
+  }
+
+  void _startDemoDrift() {
+    _liveDriftTimer?.cancel();
+    _liveDriftTimer = Timer.periodic(const Duration(seconds: 6), (timer) {
+      final session = _liveSession;
+      final partner = _partner;
+      if (session == null || partner == null || !session.isAllowed) {
+        timer.cancel();
+        return;
+      }
+      final limit = session.expiresAt;
+      if (limit != null && !DateTime.now().isBefore(limit)) {
+        timer.cancel();
+        unawaited(endLiveSession());
+        return;
+      }
+      final current = session.points[partner.id];
+      if (current == null) return;
+      final random = Random();
+      final next = LivePoint(
+        latitude: current.latitude + (random.nextDouble() - 0.5) * 0.0006,
+        longitude: current.longitude + (random.nextDouble() - 0.5) * 0.0006,
+        updatedAt: DateTime.now(),
+        accuracy: 16,
+      );
+      _liveSession = session.copyWith(
+        points: {...session.points, partner.id: next},
+      );
+      unawaited(_persistLive());
+      _emitLive();
+    });
+  }
+
+  LivePoint _nearbyPoint(LivePoint origin) {
+    final random = Random();
+    final angle = random.nextDouble() * 2 * pi;
+    final spread = 0.006 + random.nextDouble() * 0.005;
+    final latitude =
+        (origin.latitude + sin(angle) * spread).clamp(-85.0, 85.0).toDouble();
+    var longitude = origin.longitude + cos(angle) * spread;
+    if (longitude > 180) longitude -= 360;
+    if (longitude < -180) longitude += 360;
+    return LivePoint(
+      latitude: latitude,
+      longitude: longitude,
+      updatedAt: DateTime.now(),
+      accuracy: 16,
+    );
+  }
+
+  Future<void> _persistLive() async {
+    final session = _liveSession;
+    if (session == null) {
+      await _prefs.remove(_liveKey);
+      return;
+    }
+    await _prefs.setString(_liveKey, jsonEncode(session.toMap()));
+  }
+
+  void _emitLive() {
+    _liveController.add(_liveSession);
   }
 
   String _generatePin() {

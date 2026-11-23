@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'app_colors.dart';
@@ -60,14 +61,28 @@ abstract final class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        systemOverlayStyle: (brightness == Brightness.dark
+                ? SystemUiOverlayStyle.light
+                : SystemUiOverlayStyle.dark)
+            .copyWith(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: c.background,
+        ),
         titleTextStyle: textTheme.titleLarge?.copyWith(
           color: c.text,
           fontWeight: FontWeight.w800,
         ),
       ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.macOS: FadeForwardsPageTransitionsBuilder(),
+        },
+      ),
       inputDecorationTheme: InputDecorationThemeData(
         filled: true,
-        fillColor: c.field,
+        fillColor: brightness == Brightness.light ? c.cardAlt : c.field,
         hintStyle: textTheme.bodyMedium?.copyWith(color: c.muted),
         labelStyle: textTheme.bodyMedium?.copyWith(color: c.muted),
         floatingLabelStyle: textTheme.bodyMedium?.copyWith(color: c.primary),
@@ -77,7 +92,7 @@ abstract final class AppTheme {
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.lg,
         ),
-        border: _inputBorder(c.border),
+        border: _inputBorder(Colors.transparent),
         enabledBorder: _inputBorder(Colors.transparent),
         focusedBorder: _inputBorder(c.primary, width: 1.6),
         errorBorder: _inputBorder(c.danger),
@@ -131,6 +146,8 @@ abstract final class AppTheme {
         color: c.card,
         elevation: 0,
         margin: EdgeInsets.zero,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadii.lg),
           side: BorderSide(color: c.border),
@@ -141,12 +158,12 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         indicatorColor: c.softPink,
         elevation: 0,
-        height: 70,
+        height: 64,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            size: 24,
+            size: 22,
             color: selected ? c.primary : c.muted,
           );
         }),
@@ -154,7 +171,7 @@ abstract final class AppTheme {
           final selected = states.contains(WidgetState.selected);
           return textTheme.labelSmall?.copyWith(
             color: selected ? c.primary : c.muted,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           );
         }),
       ),
@@ -229,82 +246,56 @@ abstract final class AppTheme {
   }
 
   static TextTheme _textTheme(TextTheme base, AppColors c) {
+    final display = base.headlineMedium?.copyWith(
+      color: c.text,
+      fontWeight: FontWeight.w800,
+      fontSize: 30,
+      height: 1.12,
+      letterSpacing: -0.5,
+    );
+    final title = base.titleMedium?.copyWith(
+      color: c.text,
+      fontWeight: FontWeight.w700,
+      fontSize: 17,
+      height: 1.25,
+    );
+    final body = base.bodyMedium?.copyWith(
+      color: c.bodyText,
+      fontWeight: FontWeight.w400,
+      fontSize: 14.5,
+      height: 1.5,
+    );
+    final caption = base.bodySmall?.copyWith(
+      color: c.muted,
+      fontWeight: FontWeight.w500,
+      fontSize: 12.5,
+      height: 1.4,
+    );
+    final label = base.labelSmall?.copyWith(
+      color: c.muted,
+      fontWeight: FontWeight.w700,
+      fontSize: 11,
+      height: 1.2,
+      letterSpacing: 0.4,
+    );
+
     return base.copyWith(
-      displaySmall: base.displaySmall?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w800,
-        fontSize: 36,
-        height: 1.08,
-        letterSpacing: -0.8,
-      ),
-      headlineMedium: base.headlineMedium?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w800,
-        fontSize: 28,
-        height: 1.12,
-        letterSpacing: -0.4,
-      ),
-      headlineSmall: base.headlineSmall?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w800,
-        fontSize: 23,
-        height: 1.15,
-      ),
-      titleLarge: base.titleLarge?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w700,
+      displaySmall: display,
+      headlineMedium: display,
+      headlineSmall: display?.copyWith(
         fontSize: 20,
         height: 1.2,
+        letterSpacing: -0.2,
       ),
-      titleMedium: base.titleMedium?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w700,
-        fontSize: 16,
-        height: 1.25,
-      ),
-      titleSmall: base.titleSmall?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w700,
-        fontSize: 14,
-        height: 1.3,
-      ),
-      bodyLarge: base.bodyLarge?.copyWith(
-        color: c.bodyText,
-        fontWeight: FontWeight.w400,
-        fontSize: 16,
-        height: 1.5,
-      ),
-      bodyMedium: base.bodyMedium?.copyWith(
-        color: c.bodyText,
-        fontWeight: FontWeight.w400,
-        fontSize: 14,
-        height: 1.45,
-      ),
-      bodySmall: base.bodySmall?.copyWith(
-        color: c.muted,
-        fontWeight: FontWeight.w400,
-        fontSize: 12,
-        height: 1.4,
-      ),
-      labelLarge: base.labelLarge?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w700,
-        fontSize: 15,
-        height: 1.2,
-      ),
-      labelMedium: base.labelMedium?.copyWith(
-        color: c.text,
-        fontWeight: FontWeight.w600,
-        fontSize: 13,
-        height: 1.2,
-      ),
-      labelSmall: base.labelSmall?.copyWith(
-        color: c.muted,
-        fontWeight: FontWeight.w600,
-        fontSize: 11,
-        height: 1.2,
-        letterSpacing: 0.2,
-      ),
+      titleLarge: title?.copyWith(fontSize: 20, fontWeight: FontWeight.w800),
+      titleMedium: title,
+      titleSmall: title?.copyWith(fontSize: 15),
+      bodyLarge: body?.copyWith(fontSize: 15.5),
+      bodyMedium: body,
+      bodySmall: caption,
+      labelLarge: label?.copyWith(fontSize: 14, color: c.text),
+      labelMedium: label?.copyWith(fontSize: 13, color: c.text),
+      labelSmall: label,
     );
   }
 }

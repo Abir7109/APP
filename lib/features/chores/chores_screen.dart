@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -7,10 +8,13 @@ import '../../core/utils/dates.dart';
 import '../../core/utils/ids.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/app_sheet.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/hero_card.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../data/models/models.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
@@ -20,7 +24,6 @@ class ChoresScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = context.colors;
     final chores = ref.watch(choresProvider).value ?? const <Chore>[];
     final session = ref.watch(sessionProvider);
     final open = chores.where((chore) => !chore.done).toList()
@@ -32,6 +35,12 @@ class ChoresScreen extends ConsumerWidget {
       });
     final done = chores.where((chore) => chore.done).toList();
     final progress = chores.isEmpty ? 0.0 : done.length / chores.length;
+    final mineOpen =
+        open.where((chore) => !chore.isShared && chore.assignedTo == session.myId).length;
+    final partnerOpen = open
+        .where((chore) => !chore.isShared && chore.assignedTo == session.partnerId)
+        .length;
+    final sharedOpen = open.where((chore) => chore.isShared).length;
 
     String assigneeName(Chore chore) {
       if (chore.assignedTo == Chore.both) return 'Both';
@@ -53,10 +62,9 @@ class ChoresScreen extends ConsumerWidget {
       ),
       body: chores.isEmpty
           ? EmptyState(
-              icon: Icons.cleaning_services_rounded,
+              art: AppArt.chores,
               title: 'Nothing on the board',
-              message:
-                  'Split the little things so the shared life feels lighter.',
+              message: 'Split the little things. Start with one.',
               actionLabel: 'Add a chore',
               onAction: () => _showEditor(context),
             )
@@ -68,81 +76,61 @@ class ChoresScreen extends ConsumerWidget {
                 AppSpacing.xxxl,
               ),
               children: [
-                AppCard(
-                  gradient: AppGradients.brand,
-                  borderColor: Colors.transparent,
-                  padding: const EdgeInsets.all(AppSpacing.xxl),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.cleaning_services_rounded,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${done.length}/${chores.length}',
-                            style: context.texts.headlineSmall?.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
+                StaggeredEnter(
+                  index: 0,
+                  child: HeroCard(
+                    art: AppArt.chores,
+                    artSize: 88,
+                    eyebrow: 'Chores',
+                    title: 'Teamwork makes the shared life lighter.',
+                    subtitle: '${done.length} of ${chores.length} done',
+                    footer: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 8,
+                        backgroundColor: Colors.white.withValues(alpha: 0.22),
+                        valueColor:
+                            const AlwaysStoppedAnimation(Colors.white),
                       ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'Teamwork makes\nthe shared life lighter.',
-                        style: context.texts.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 8,
-                          backgroundColor:
-                              Colors.white.withValues(alpha: 0.22),
-                          valueColor: const AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      ),
-                    ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                StaggeredEnter(
+                  index: 1,
+                  child: SectionCard(
+                    child: _FairnessBar(
+                      youLabel: 'You',
+                      partnerLabel: session.partnerName,
+                      mine: mineOpen,
+                      partner: partnerOpen,
+                      shared: sharedOpen,
+                    ),
                   ),
                 ),
                 if (open.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xxl),
-                  Text(
-                    'TO DO · ${open.length}',
-                    style: context.texts.labelSmall?.copyWith(
-                      color: colors.muted,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  Text('To do', style: context.texts.titleMedium),
                   const SizedBox(height: AppSpacing.sm),
-                  for (final chore in open) ...[
-                    _ChoreCard(
-                      chore: chore,
-                      assignee: assigneeName(chore),
-                      onToggle: () => _toggle(context, ref, chore),
-                      onEdit: () => _showEditor(context, chore: chore),
-                      onDelete: () => _delete(context, ref, chore),
+                  for (var index = 0; index < open.length; index++) ...[
+                    StaggeredEnter(
+                      index: index + 2,
+                      child: _ChoreCard(
+                        chore: open[index],
+                        assignee: assigneeName(open[index]),
+                        onToggle: () => _toggle(context, ref, open[index]),
+                        onEdit: () =>
+                            _showEditor(context, chore: open[index]),
+                        onDelete: () => _delete(context, ref, open[index]),
+                      ),
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.sm),
                   ],
                 ],
                 if (done.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.xxl),
-                  Text(
-                    'DONE · ${done.length}',
-                    style: context.texts.labelSmall?.copyWith(
-                      color: colors.muted,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  Text('Done', style: context.texts.titleMedium),
                   const SizedBox(height: AppSpacing.sm),
                   for (final chore in done) ...[
                     _ChoreCard(
@@ -152,7 +140,7 @@ class ChoresScreen extends ConsumerWidget {
                       onEdit: () => _showEditor(context, chore: chore),
                       onDelete: () => _delete(context, ref, chore),
                     ),
-                    const SizedBox(height: AppSpacing.md),
+                    const SizedBox(height: AppSpacing.sm),
                   ],
                 ],
               ],
@@ -165,6 +153,7 @@ class ChoresScreen extends ConsumerWidget {
     WidgetRef ref,
     Chore chore,
   ) async {
+    HapticFeedback.lightImpact();
     try {
       await ref.read(backendProvider).toggleChore(chore.id, !chore.done);
     } catch (error) {
@@ -205,6 +194,108 @@ class ChoresScreen extends ConsumerWidget {
   }
 }
 
+class _FairnessBar extends StatelessWidget {
+  const _FairnessBar({
+    required this.youLabel,
+    required this.partnerLabel,
+    required this.mine,
+    required this.partner,
+    required this.shared,
+  });
+
+  final String youLabel;
+  final String partnerLabel;
+  final int mine;
+  final int partner;
+  final int shared;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final sum = mine + partner + shared;
+    final total = sum == 0 ? 1 : sum;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Fair share', style: context.texts.titleSmall),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Expanded(
+              child: _ShareColumn(
+                label: youLabel,
+                value: mine,
+                fraction: mine / total,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: _ShareColumn(
+                label: partnerLabel,
+                value: partner,
+                fraction: partner / total,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: _ShareColumn(
+                label: 'Shared',
+                value: shared,
+                fraction: shared / total,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          sum == 0 ? 'All clear.' : '$sum open between you.',
+          style: context.texts.bodySmall?.copyWith(color: colors.muted),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShareColumn extends StatelessWidget {
+  const _ShareColumn({
+    required this.label,
+    required this.value,
+    required this.fraction,
+  });
+
+  final String label;
+  final int value;
+  final double fraction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.texts.bodySmall?.copyWith(color: colors.muted),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text('$value', style: context.texts.titleMedium),
+        const SizedBox(height: AppSpacing.xs),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: fraction,
+            minHeight: 6,
+            backgroundColor: colors.field,
+            valueColor: AlwaysStoppedAnimation(colors.primary),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _ChoreCard extends StatelessWidget {
   const _ChoreCard({
     required this.chore,
@@ -232,32 +323,34 @@ class _ChoreCard extends StatelessWidget {
             DateTime.now().day,
           ),
         );
-    return AppCard(
+    return SectionCard(
       onTap: onEdit,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: chore.done ? colors.success : Colors.transparent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: chore.done ? colors.success : colors.border,
-                  width: 1.6,
+          Semantics(
+            button: true,
+            label: chore.done ? 'Mark as not done' : 'Mark as done',
+            child: InkWell(
+              onTap: onToggle,
+              borderRadius: BorderRadius.circular(999),
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                  child: Icon(
+                    chore.done
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: chore.done ? colors.success : colors.border,
+                    size: 28,
+                  ),
                 ),
               ),
-              child: chore.done
-                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 19)
-                  : null,
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,10 +369,10 @@ class _ChoreCard extends StatelessWidget {
                   children: [
                     AppPill(
                       label: assignee,
-                      color: chore.assignedTo == Chore.both
+                      color: chore.isShared
                           ? colors.tintDarker
                           : colors.primary,
-                      icon: chore.assignedTo == Chore.both
+                      icon: chore.isShared
                           ? Icons.people_rounded
                           : Icons.person_rounded,
                     ),
@@ -392,6 +485,7 @@ class _ChoreSheetState extends ConsumerState<_ChoreSheet> {
     return AppSheet(
       title: widget.chore == null ? 'Add a chore' : 'Edit chore',
       subtitle: 'Keep the shared list honest and light.',
+      art: AppArt.chores,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -446,7 +540,9 @@ class _ChoreSheetState extends ConsumerState<_ChoreSheet> {
                     dateKeyOf(_dueAt!) == dateKeyOf(DateTime.now()),
                 onSelected: (_) {
                   final now = DateTime.now();
-                  setState(() => _dueAt = DateTime(now.year, now.month, now.day));
+                  setState(
+                    () => _dueAt = DateTime(now.year, now.month, now.day),
+                  );
                 },
               ),
               ChoiceChip(

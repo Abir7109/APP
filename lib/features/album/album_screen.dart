@@ -10,10 +10,13 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/dates.dart';
 import '../../core/utils/ui.dart';
 import '../../core/widgets/app_card.dart';
+import '../../core/widgets/app_illustration.dart';
 import '../../core/widgets/app_pill.dart';
 import '../../core/widgets/app_sheet.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/list_row.dart';
+import '../../core/widgets/staggered_enter.dart';
 import '../../data/models/models.dart';
 import '../../state/data_providers.dart';
 import '../../state/session_provider.dart';
@@ -34,13 +37,22 @@ class AlbumScreen extends ConsumerWidget {
     final past = sorted.where((c) => c.weekKey != currentKey).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Our album')),
+      appBar: AppBar(
+        title: const Text('Our album'),
+        actions: [
+          IconButton(
+            tooltip: 'Add a custom prompt',
+            onPressed: () => _showPromptSheet(context),
+            icon: const Icon(Icons.add_a_photo_rounded),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+      ),
       body: challenges.isEmpty
           ? EmptyState(
-              icon: Icons.photo_library_rounded,
+              art: AppArt.empty,
               title: 'Your album is empty',
-              message:
-                  'Weekly photo prompts will appear here. Add your first photo to start the collection.',
+              message: 'One photo a week. The first prompt is waiting.',
               actionLabel: 'Create a prompt',
               onAction: () => _showPromptSheet(context),
             )
@@ -53,20 +65,44 @@ class AlbumScreen extends ConsumerWidget {
               ),
               children: [
                 if (current.isNotEmpty) ...[
-                  Text(
-                    'THIS WEEK',
-                    style: context.texts.labelSmall?.copyWith(
-                      color: colors.muted,
-                      letterSpacing: 1,
+                  StaggeredEnter(
+                    index: 0,
+                    child: Row(
+                      children: [
+                        const IllustrationTile(AppArt.photos, size: 72),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'This week',
+                                style: context.texts.titleMedium,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                shortDate(DateTime.now()),
+                                style: context.texts.bodySmall?.copyWith(
+                                  color: colors.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  for (final challenge in current) ...[
-                    _CurrentChallengeCard(
-                      challenge: challenge,
-                      partnerName: session.partnerName,
-                      myId: session.myId,
-                      onAddPhoto: () => _addPhoto(context, ref, challenge),
+                  const SizedBox(height: AppSpacing.md),
+                  for (var index = 0; index < current.length; index++) ...[
+                    StaggeredEnter(
+                      index: index + 1,
+                      child: _CurrentChallengeCard(
+                        challenge: current[index],
+                        partnerName: session.partnerName,
+                        myId: session.myId,
+                        onAddPhoto: () =>
+                            _addPhoto(context, ref, current[index]),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
@@ -74,27 +110,40 @@ class AlbumScreen extends ConsumerWidget {
                 if (past.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'PAST PROMPTS',
-                    style: context.texts.labelSmall?.copyWith(
-                      color: colors.muted,
-                      letterSpacing: 1,
-                    ),
+                    'Past prompts',
+                    style: context.texts.titleMedium,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  for (final challenge in past) ...[
-                    _PastChallengeCard(
-                      challenge: challenge,
-                      onTap: () => _preview(context, challenge),
+                  SectionCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                  ],
+                    child: Column(
+                      children: [
+                        for (var index = 0; index < past.length; index++)
+                          ListRow(
+                            showDivider: index < past.length - 1,
+                            onTap: () => _preview(context, past[index]),
+                            leading: _PastThumb(
+                              source: past[index].imageSource,
+                            ),
+                            title: past[index].prompt,
+                            subtitle:
+                                'Week of ${shortDate(DateTime.tryParse(past[index].weekKey) ?? DateTime.now())}',
+                            trailing: Icon(
+                              past[index].isComplete
+                                  ? Icons.check_circle_rounded
+                                  : Icons.circle_outlined,
+                              color: past[index].isComplete
+                                  ? colors.success
+                                  : colors.border,
+                              size: 20,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
-                const SizedBox(height: AppSpacing.lg),
-                OutlinedButton.icon(
-                  onPressed: () => _showPromptSheet(context),
-                  icon: const Icon(Icons.add_a_photo_rounded),
-                  label: const Text('Add a custom prompt'),
-                ),
               ],
             ),
     );
@@ -110,6 +159,7 @@ class AlbumScreen extends ConsumerWidget {
       builder: (sheetContext) => AppSheet(
         title: 'Add a photo',
         subtitle: challenge.prompt,
+        art: AppArt.photos,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -139,7 +189,8 @@ class AlbumScreen extends ConsumerWidget {
       bytes = await picked.readAsBytes();
     } catch (error) {
       if (context.mounted) {
-        showAppSnackBar(context, 'Could not open the photo picker.', isError: true);
+        showAppSnackBar(context, 'Could not open the photo picker.',
+            isError: true);
       }
       return;
     }
@@ -157,7 +208,9 @@ class AlbumScreen extends ConsumerWidget {
               completedAt: DateTime.now(),
             ),
           );
-      if (context.mounted) showAppSnackBar(context, 'Photo added to your album.');
+      if (context.mounted) {
+        showAppSnackBar(context, 'Photo added to your album.');
+      }
     } catch (error) {
       if (context.mounted) {
         showAppSnackBar(context, friendlyError(error), isError: true);
@@ -212,6 +265,34 @@ class AlbumScreen extends ConsumerWidget {
   }
 }
 
+class _PastThumb extends StatelessWidget {
+  const _PastThumb({this.source});
+
+  final String? source;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.sm),
+      child: SizedBox(
+        width: 52,
+        height: 52,
+        child: source == null
+            ? ColoredBox(
+                color: colors.softPink,
+                child: Icon(
+                  Icons.image_outlined,
+                  color: colors.muted,
+                  size: 22,
+                ),
+              )
+            : ChallengeImage(source: source),
+      ),
+    );
+  }
+}
+
 class _CurrentChallengeCard extends StatelessWidget {
   const _CurrentChallengeCard({
     required this.challenge,
@@ -232,9 +313,9 @@ class _CurrentChallengeCard extends StatelessWidget {
     final author = challenge.completedBy == null
         ? null
         : challenge.completedBy == myId
-            ? 'You'
+            ? null
             : partnerName;
-    return AppCard(
+    return SectionCard(
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -251,16 +332,16 @@ class _CurrentChallengeCard extends StatelessWidget {
             )
           else
             Container(
-              height: 170,
+              height: 140,
               decoration: BoxDecoration(
-                gradient: AppGradients.soft(colors),
+                color: colors.softPink,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(AppRadii.lg),
                 ),
               ),
               child: Icon(
                 Icons.photo_camera_rounded,
-                size: 42,
+                size: 38,
                 color: colors.primary.withValues(alpha: 0.55),
               ),
             ),
@@ -269,7 +350,11 @@ class _CurrentChallengeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
                     AppPill(
                       label: challenge.isComplete ? 'Captured' : 'This week',
@@ -280,7 +365,6 @@ class _CurrentChallengeCard extends StatelessWidget {
                           ? Icons.check_rounded
                           : Icons.auto_awesome_rounded,
                     ),
-                    const Spacer(),
                     Text(
                       shortDate(DateTime.tryParse(challenge.weekKey) ??
                           DateTime.now()),
@@ -311,69 +395,6 @@ class _CurrentChallengeCard extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PastChallengeCard extends StatelessWidget {
-  const _PastChallengeCard({required this.challenge, required this.onTap});
-
-  final PhotoChallenge challenge;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final image = challenge.imageSource;
-    return AppCard(
-      onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadii.md),
-            child: SizedBox(
-              width: 72,
-              height: 72,
-              child: image == null
-                  ? Container(
-                      color: colors.background,
-                      child: Icon(
-                        Icons.image_not_supported_rounded,
-                        color: colors.muted,
-                        size: 24,
-                      ),
-                    )
-                  : ChallengeImage(source: image),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  challenge.prompt,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: context.texts.titleSmall,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Week of ${shortDate(DateTime.tryParse(challenge.weekKey) ?? DateTime.now())}',
-                  style: context.texts.bodySmall?.copyWith(
-                    color: colors.muted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (challenge.isComplete)
-            Icon(Icons.check_circle_rounded, color: colors.success, size: 20)
-          else
-            Icon(Icons.circle_outlined, color: colors.border, size: 20),
         ],
       ),
     );
@@ -465,6 +486,7 @@ class _PromptSheetState extends ConsumerState<_PromptSheet> {
     return AppSheet(
       title: 'Custom photo prompt',
       subtitle: 'Add a prompt for this week.',
+      art: AppArt.photos,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
